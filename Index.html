@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLNDinas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--y:#F7E52A;--yd:#E9D519;--b:#0B6B8F;--ink:#111827;--mut:#6B7280;--line:#E5E7EB}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;color:var(--ink);background:#fff}
+.split{flex:1;display:flex}
+.left{position:relative;width:46%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 40px;text-align:center}
+.left::before{content:"";position:absolute;inset:0;z-index:0;clip-path:url(#wave);
+  background:radial-gradient(circle at 18% 14%,#FCEF7A,transparent 45%),radial-gradient(circle at 70% 90%,#FBEB6B,transparent 45%),#FFF8C2}
+.left>*{position:relative;z-index:1}
+.illus{width:100%;max-width:380px}
+.tag{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #F3E36B;border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;margin:26px 0 14px}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--y);border:1px solid #CBB800}
+h1{font-size:34px;line-height:1.15;font-weight:800;letter-spacing:-.5px;max-width:380px}
+.left p{margin-top:10px;font-size:15px;color:#374151}
+.right{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+.corner{position:absolute;top:26px;right:36px;display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:7px 14px 7px 8px;font-size:12px;line-height:1.3}
+.corner svg{width:26px;height:26px}.corner b{display:block;font-weight:700}.corner span{color:var(--mut);font-size:10.5px;letter-spacing:.5px}
+.center{display:flex;flex-direction:column;align-items:center;text-align:center}
+.logo{padding:8px;border:1px solid #F3E36B;border-radius:22px}.logo svg{display:block;width:84px;height:84px}
+.inst{margin-top:20px;font-size:12px;font-weight:700;letter-spacing:1.4px;color:var(--b)}
+.name{margin:6px 0 24px;font-size:36px;font-weight:800;letter-spacing:-.5px}
+.btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:8px;min-width:168px;justify-content:center;padding:13px 26px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:#fff;transition:background .2s,transform .2s}
+.btn:hover{background:#F9FAFB;transform:translateY(-1px)}
+.btn.main{background:var(--y);border-color:var(--y)}.btn.main:hover{background:var(--yd)}
+.btn:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 48px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mut);font-weight:500}
+footer span:first-child::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#10B981;margin-right:9px}
+@media(max-width:860px){.split{flex-direction:column}.left{width:100%;padding:36px 24px}.left::before{clip-path:none}.corner{position:static;margin-bottom:24px}.right{flex-direction:column;padding:32px 20px}footer{padding:14px 20px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <clipPath id="wave" clipPathUnits="objectBoundingBox"><path d="M0,0 H0.93 C1,0.22 0.88,0.42 0.96,0.62 C0.99,0.78 0.92,0.9 0.9,1 H0 Z"/></clipPath>
+    <symbol id="logo" viewBox="0 0 48 48">
+      <rect width="48" height="48" rx="12" fill="#F7E52A"/>
+      <path d="M27 8 17 26h6l-3 12 11-18h-6z" fill="#E5252A"/>
+      <path d="M13 39c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0M13 43c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0" stroke="#1AA3D9" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="split">
+  <section class="left">
+    <svg class="illus" viewBox="0 0 400 250" role="img" aria-label="Mobil dinas dan jadwal peminjaman">
+      <circle cx="200" cy="130" r="82" fill="#FFFBE0"/>
+      <ellipse cx="200" cy="222" rx="140" ry="10" fill="#F3E36B" opacity=".6"/>
+      <rect x="40" y="28" width="86" height="82" rx="10" fill="#fff" stroke="#1F2937" stroke-width="2"/>
+      <rect x="40" y="28" width="86" height="20" rx="10" fill="#29A9E1"/>
+      <circle cx="56" cy="64" r="4" fill="#F7E52A" stroke="#1F2937"/><rect x="68" y="62" width="44" height="4" rx="2" fill="#D1D5DB"/>
+      <circle cx="56" cy="80" r="4" fill="#F7E52A" stroke="#1F2937"/><rect x="68" y="78" width="44" height="4" rx="2" fill="#D1D5DB"/>
+      <circle cx="56" cy="96" r="4" fill="#29A9E1" stroke="#1F2937"/><rect x="68" y="94" width="30" height="4" rx="2" fill="#F5B700"/>
+      <path d="M296 34c-17 0-30 13-30 29 0 22 30 46 30 46s30-24 30-46c0-16-13-29-30-29z" fill="#29A9E1" stroke="#1F2937" stroke-width="2"/>
+      <circle cx="296" cy="62" r="13" fill="#fff"/><path d="M298 52l-8 12h6l-2 9 8-12h-6z" fill="#1F2937"/>
+      <path d="M62 170c0-12 8-16 20-18l22-26c4-5 8-6 14-6h82c8 0 13 3 18 9l16 22c12 2 22 6 22 14v14H62z" fill="#fff" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M114 148l18-24h38v24zM176 148v-24h30l16 24z" fill="#DDF1FD" stroke="#1F2937" stroke-width="2.5" stroke-linejoin="round"/>
+      <rect x="62" y="160" width="190" height="7" fill="#F7E52A"/><rect x="62" y="167" width="190" height="4" fill="#29A9E1"/>
+      <path d="M62 170h190v14H62z" fill="none" stroke="#1F2937" stroke-width="3"/>
+      <circle cx="108" cy="188" r="20" fill="#1F2937"/><circle cx="108" cy="188" r="9" fill="#29A9E1" stroke="#fff" stroke-width="3"/>
+      <circle cx="222" cy="188" r="20" fill="#1F2937"/><circle cx="222" cy="188" r="9" fill="#29A9E1" stroke="#fff" stroke-width="3"/>
+    </svg>
+    <span class="tag">Layanan Transportasi Operasional Dinas</span>
+    <h1>Sistem Peminjaman Kendaraan Dinas</h1>
+    <p>Booking mobil dinas lebih mudah, jelas, dan tercatat</p>
+  </section>
+
+  <section class="right">
+    <div class="corner">
+      <svg><use href="#logo"/></svg>
+      <div><b>PLN UP3 MALANG</b><span>LANDING PAGE</span></div>
+    </div>
+    <div class="center">
+      <div class="logo"><svg><use href="#logo"/></svg></div>
+      <div class="inst">PT PLN (PERSERO) UP3 MALANG</div>
+      <div class="name">PLNDinas</div>
+      <div class="btns">
+        <a class="btn main" href="<?!= baseUrl ?>?page=login" target="_top">Masuk &rarr;</a>
+        <a class="btn" href="<?!= baseUrl ?>?page=register" target="_top">Daftar</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <span>Server Operasional Aktif &mdash; Kantor UP3 Malang Jl. Basuki Rahmat No. 100</span>
+  <span>&copy; 2026 PT PLN (Persero) UP3 Malang</span>
+</footer>
+</body>
+</html>

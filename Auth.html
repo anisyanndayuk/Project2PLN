@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLNDinas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+:root{--y:#F7E52A;--yd:#E9D519;--b:#0B6B8F;--ink:#111827;--mut:#6B7280;--line:#E5E7EB;--bg:#F7F9FD;--red:#DC2626}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;left:-140px;top:-80px;width:560px;height:560px;background:radial-gradient(circle,rgba(247,229,42,.45),transparent 65%);pointer-events:none}
+body::after{content:"";position:fixed;right:-180px;bottom:-140px;width:580px;height:580px;background:radial-gradient(circle,rgba(26,163,217,.18),transparent 65%);pointer-events:none}
+header{display:flex;justify-content:space-between;align-items:center;padding:22px 32px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.brand svg{width:28px;height:28px}
+.pill{font-size:11px;font-weight:600;letter-spacing:.5px;background:#fff;border-radius:99px;padding:7px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--b);margin-right:7px}
+main{flex:1;display:flex;justify-content:center;align-items:flex-start;padding:16px 16px 40px;position:relative;z-index:1}
+.card{width:100%;max-width:420px;background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(17,24,39,.08);padding:30px 32px 26px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--y),#1AA3D9)}
+.card[data-view=view-register]{max-width:440px}
+.id{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.id svg{width:44px;height:44px;margin-bottom:4px}
+.id div{display:flex;flex-direction:column;gap:3px}
+.id small{font-size:10.5px;font-weight:700;letter-spacing:1px;color:var(--mut)}
+.id b{font-size:15px;font-weight:600}
+.card[data-view=view-register] .id{flex-direction:row;text-align:left;gap:12px;border:0;padding-bottom:4px;margin-bottom:8px}
+.card[data-view=view-register] .id svg{margin:0}
+h2{font-size:25px;font-weight:800;letter-spacing:-.3px}
+.sub{font-size:13px;color:var(--mut);margin:4px 0 18px;line-height:1.5}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:6px;text-transform:uppercase}
+.inp{position:relative}
+.inp input,.inp select{width:100%;padding:12px 40px 12px 13px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;background:#fff;color:var(--ink);outline:none;appearance:none;transition:border-color .2s,box-shadow .2s}
+.inp input::placeholder{color:#9CA3AF}
+.inp input:focus,.inp select:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(11,107,143,.15)}
+.inp input.bad,.inp select.bad{border-color:var(--red)}
+.inp i{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--b);font-size:14px;pointer-events:none}
+.inp i.tg{pointer-events:auto;cursor:pointer;color:var(--mut)}
+.em{display:none;font-size:12px;color:var(--red);margin-top:5px}
+.em.show{display:block}.em a{color:var(--b);font-weight:600}
+.grp{margin-bottom:14px}.grp>b{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:6px;text-transform:uppercase}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opt{position:relative}.opt input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.opt span{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-weight:600;color:var(--mut);transition:all .2s}
+.opt input:checked+span{border-color:var(--b);background:#EAF6FB;color:var(--b)}.opt input:focus-visible+span{outline:3px solid var(--b);outline-offset:2px}
+.inp select:disabled{background:#F3F4F6;color:#9CA3AF;cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.forgot{text-align:right;margin:-6px 0 16px;font-size:12px}
+.lnk{color:var(--b);font-weight:600;text-decoration:none;cursor:pointer}
+.btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border:1px solid var(--y);border-radius:10px;background:var(--y);color:var(--ink);font-size:14px;font-weight:700;cursor:pointer;transition:background .2s}
+.btn:hover:not(:disabled){background:var(--yd)}
+.btn:disabled{opacity:.65;cursor:not-allowed}
+.btn.ghost{background:#fff;border-color:var(--line)}.btn.ghost:hover:not(:disabled){background:#F9FAFB}
+.btn:focus-visible,.lnk:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.spin{display:none;width:15px;height:15px;border:2px solid rgba(17,24,39,.25);border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.foot{text-align:center;font-size:13px;margin-top:18px}
+.alert{display:none;padding:11px 13px;border-radius:8px;font-size:13px;margin-bottom:14px;line-height:1.5}
+.alert.err{display:block;background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
+.alert.ok{display:block;background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
+.view{display:none}.view.active{display:block;animation:in .25s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ctr{text-align:center}
+.ic{width:64px;height:64px;border-radius:50%;background:#FEF9C3;color:var(--b);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px}
+.ic.bad{background:#FEE2E2;color:var(--red)}
+.mail{font-weight:700;color:var(--b);word-break:break-all}
+.page-foot{text-align:center;font-size:11.5px;color:var(--mut);font-weight:500;padding:18px;position:relative;z-index:1}
+@media(max-width:480px){.card{padding:26px 20px}.two{grid-template-columns:1fr}header{padding:18px 16px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="logo" viewBox="0 0 48 48">
+    <rect width="48" height="48" rx="12" fill="#F7E52A"/>
+    <path d="M27 8 17 26h6l-3 12 11-18h-6z" fill="#E5252A"/>
+    <path d="M13 39c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0M13 43c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0" stroke="#1AA3D9" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  </symbol>
+</defs></svg>
+
+<header>
+  <div class="brand"><svg><use href="#logo"/></svg>PLNDinas</div>
+  <div class="pill">PLN UP3 MALANG</div>
+</header>
+
+<main>
+<div class="card" id="card" data-view="view-login">
+  <div class="id">
+    <svg><use href="#logo"/></svg>
+    <div><small>PT PLN (PERSERO) UP3 MALANG</small><b>Sistem Peminjaman Kendaraan Dinas</b></div>
+  </div>
+
+  <!-- LOGIN -->
+  <section id="view-login" class="view">
+    <h2>Masuk</h2>
+    <p class="sub">Selamat datang kembali di portal operasional.</p>
+    <div id="alertLogin" class="alert"></div>
+    <form id="loginForm" novalidate>
+      <div class="field"><label for="loginId">Email / Username</label>
+        <div class="inp"><input id="loginId" type="text" placeholder="Masukkan Email atau Username" autocomplete="username"><i class="far fa-user"></i></div></div>
+      <div class="field"><label for="loginPass">Password</label>
+        <div class="inp"><input id="loginPass" type="password" placeholder="Masukkan password" autocomplete="current-password"><i class="far fa-eye-slash tg" onclick="togglePw('loginPass',this)"></i></div></div>
+      <div class="forgot"><a class="lnk" onclick="pindahHalaman('view-forgot-password')">Lupa password?</a></div>
+      <button type="submit" id="btnLogin" class="btn"><span class="spin"></span><span class="t">Masuk</span><i class="fas fa-arrow-right"></i></button>
+      <div class="foot">Belum punya akun? <a class="lnk" onclick="pindahHalaman('view-register')">Daftar di sini</a></div>
+    </form>
+  </section>
+
+  <!-- REGISTER -->
+  <section id="view-register" class="view">
+    <h2>Daftar</h2>
+    <p class="sub">Buat akun baru untuk mulai meminjam kendaraan dinas operasional.</p>
+    <form id="registerForm" novalidate>
+      <div class="field"><label for="regNama">Nama lengkap</label>
+        <div class="inp"><input id="regNama" type="text" placeholder="Masukkan nama lengkap" autocomplete="off"><i class="far fa-user"></i></div><div id="errNama" class="em"></div></div>
+      <div class="two">
+        <div class="field"><label for="regUsername">Username</label>
+          <div class="inp"><input id="regUsername" type="text" placeholder="Masukkan username" autocomplete="off"><i class="far fa-id-card"></i></div><div id="errUsername" class="em"></div></div>
+        <div class="field"><label for="regEmail">Email</label>
+          <div class="inp"><input id="regEmail" type="email" placeholder="nama@pln.co.id" autocomplete="off"><i class="fas fa-at"></i></div><div id="errEmail" class="em"></div></div>
+      </div>
+      <div class="field"><label for="regHp">No. HP</label>
+        <div class="inp"><input id="regHp" type="tel" inputmode="tel" placeholder="Contoh: 081234567890" autocomplete="off"><i class="fas fa-phone"></i></div><div id="errHp" class="em"></div></div>
+      <div class="grp"><b>Peran</b>
+        <div class="seg">
+          <label class="opt"><input type="radio" name="regPeran" value="Pemohon" checked><span><i class="far fa-user"></i>Pemohon</span></label>
+          <label class="opt"><input type="radio" name="regPeran" value="Driver"><span><i class="fas fa-car-side"></i>Driver</span></label>
+        </div></div>
+      <div class="field" id="fieldBagian"><label for="regBagian">Bagian / unit kerja</label>
+        <div class="inp"><select id="regBagian"><option value="" disabled selected>Pilih Bagian...</option>
+          <? for (var i = 0; i < daftarBagian.length; i++) { ?><option value="<?= daftarBagian[i] ?>"><?= daftarBagian[i] ?></option><? } ?>
+        </select><i class="fas fa-chevron-down"></i></div><div id="errBagian" class="em"></div></div>
+      <div class="field"><label for="regPassword">Password</label>
+        <div class="inp"><input id="regPassword" type="password" placeholder="Buat password (min. 8 karakter)" autocomplete="new-password"><i class="far fa-eye-slash tg" onclick="togglePw('regPassword',this)"></i></div><div id="errPassword" class="em"></div></div>
+      <div class="field"><label for="regConfirm">Konfirmasi password</label>
+        <div class="inp"><input id="regConfirm" type="password" placeholder="Ulangi password" autocomplete="new-password"><i class="far fa-eye-slash tg" onclick="togglePw('regConfirm',this)"></i></div><div id="errConfirm" class="em"></div></div>
+      <button type="submit" id="btnRegister" class="btn"><span class="spin"></span><i class="fas fa-user-plus"></i><span class="t">Daftar</span></button>
+      <div class="foot">Sudah punya akun? <a class="lnk" onclick="pindahHalaman('view-login')">Masuk di sini &rarr;</a></div>
+    </form>
+  </section>
+
+  <!-- VERIFIKASI EMAIL -->
+  <section id="view-verify" class="view ctr">
+    <div class="ic"><i class="fas fa-envelope"></i></div>
+    <h2>Verifikasi email Anda</h2>
+    <p class="sub">Link verifikasi dikirim ke<br><span id="targetEmail" class="mail"></span><br>Cek kotak masuk atau folder spam.</p>
+    <div id="alertVerify" class="alert"></div>
+    <button type="button" id="btnResend" class="btn ghost" onclick="kirimUlang()">Kirim ulang email</button>
+    <div class="foot"><a class="lnk" onclick="pindahHalaman('view-login')">Kembali ke halaman masuk</a></div>
+  </section>
+
+  <!-- HASIL VERIFIKASI (dari link email) -->
+  <section id="view-verify-result" class="view ctr">
+    <div id="vrIcon" class="ic"><i class="fas fa-circle-check"></i></div>
+    <h2 id="vrJudul"></h2>
+    <p class="sub" id="vrPesan" style="margin-bottom:22px"></p>
+    <button type="button" class="btn" onclick="pindahHalaman('view-login')">Ke halaman masuk</button>
+  </section>
+
+  <!-- LUPA PASSWORD -->
+  <section id="view-forgot-password" class="view">
+    <h2>Lupa password</h2>
+    <p class="sub">Masukkan email akun Anda. Kami kirim link untuk membuat password baru.</p>
+    <div id="alertForgot" class="alert"></div>
+    <form id="forgotForm" novalidate>
+      <div class="field"><label for="forgotEmail">Email</label>
+        <div class="inp"><input id="forgotEmail" type="email" placeholder="Masukkan email yang terdaftar" autocomplete="email"><i class="fas fa-at"></i></div></div>
+      <button type="submit" id="btnForgot" class="btn"><span class="spin"></span><span class="t">Kirim link reset</span></button>
+      <div class="foot"><a class="lnk" onclick="pindahHalaman('view-login')">Kembali ke halaman masuk</a></div>
+    </form>
+  </section>
+
+  <!-- RESET PASSWORD -->
+  <section id="view-reset-password" class="view">
+    <div id="resetForm">
+      <h2>Buat password baru</h2>
+      <p class="sub">Masukkan password baru untuk akun Anda.</p>
+      <div id="alertReset" class="alert"></div>
+      <form id="resetFormEl" novalidate>
+        <div class="field"><label for="resPass">Password baru</label>
+          <div class="inp"><input id="resPass" type="password" placeholder="Min. 8 karakter" autocomplete="new-password"><i class="far fa-eye-slash tg" onclick="togglePw('resPass',this)"></i></div></div>
+        <div class="field"><label for="resConfirm">Konfirmasi password baru</label>
+          <div class="inp"><input id="resConfirm" type="password" placeholder="Ulangi password baru" autocomplete="new-password"><i class="far fa-eye-slash tg" onclick="togglePw('resConfirm',this)"></i></div></div>
+        <button type="submit" id="btnReset" class="btn"><span class="spin"></span><span class="t">Simpan password baru</span></button>
+      </form>
+    </div>
+    <div id="resetInvalid" class="ctr" style="display:none">
+      <div class="ic bad"><i class="fas fa-circle-xmark"></i></div>
+      <h2>Link tidak valid</h2>
+      <p class="sub" id="resetInvalidMsg" style="margin-bottom:22px"></p>
+      <button type="button" class="btn" onclick="pindahHalaman('view-forgot-password')">Minta link baru</button>
+    </div>
+  </section>
+</div>
+</main>
+
+<div class="page-foot">&copy; 2026 PT PLN (Persero) UP3 Malang. &bull; Hak Cipta Dilindungi Undang-Undang</div>
+
+<script>
+const BASE = "<?!= baseUrl ?>";
+const RESET_TOKEN = "<?!= resetToken ?>";
+const VERIF = { status: "<?!= verifStatus ?>", pesan: <?!= JSON.stringify(verifPesan) ?> };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const $ = id => document.getElementById(id);
+
+// ---------- Navigasi antar tampilan (tanpa refresh) ----------
+function pindahHalaman(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $(id).classList.add('active');
+  $('card').dataset.view = id;
+  window.scrollTo(0, 0);
+}
+
+// ---------- Helper UI ----------
+function togglePw(id, icon) {
+  const el = $(id), tampil = el.type === 'password';
+  el.type = tampil ? 'text' : 'password';
+  icon.className = (tampil ? 'far fa-eye' : 'far fa-eye-slash') + ' tg';
+}
+function busy(btn, on, teks) {
+  btn.disabled = on;
+  btn.querySelector('.spin').style.display = on ? 'inline-block' : 'none';
+  const t = btn.querySelector('.t');
+  if (on) { btn.dataset.asal = t.innerText; t.innerText = teks; }
+  else if (btn.dataset.asal) t.innerText = btn.dataset.asal;
+}
+function pesan(id, teks, tipe) {
+  const el = $(id);
+  el.className = 'alert' + (teks ? ' ' + tipe : '');
+  el.innerText = teks || '';
+}
+function setErr(inputId, errId, html) {
+  $(inputId).classList.add('bad');
+  $(errId).innerHTML = html; $(errId).style.color = ''; $(errId).classList.add('show');
+}
+function clrErr(inputId, errId) {
+  $(inputId).classList.remove('bad');
+  $(errId).classList.remove('show'); $(errId).innerHTML = '';
+}
+function gagal(e) { return Swal.fire({ icon: 'warning', title: 'Koneksi terputus', text: 'Periksa jaringan Anda lalu coba lagi.', confirmButtonColor: '#F7E52A', customClass: { confirmButton: 'swal-ok' } }); }
+
+// ---------- Validasi real-time (Register) ----------
+$('regNama').addEventListener('input', function () { this.value = this.value.replace(/[0-9]/g, ''); });
+$('regNama').addEventListener('blur', function () {
+  this.value.trim() ? clrErr('regNama', 'errNama') : setErr('regNama', 'errNama', 'Nama lengkap wajib diisi.');
+});
+$('regUsername').addEventListener('blur', function () {
+  const v = this.value.trim();
+  if (!v) return setErr('regUsername', 'errUsername', 'Username wajib diisi.');
+  if (!/^\S{3,30}$/.test(v)) return setErr('regUsername', 'errUsername', 'Username minimal 3 karakter dan tanpa spasi.');
+  clrErr('regUsername', 'errUsername');
+  google.script.run.withSuccessHandler(r => { if (!r.tersedia && $('regUsername').value.trim() === v) setErr('regUsername', 'errUsername', r.pesan); })
+    .cekKetersediaanAkun('username', v);
+});
+$('regEmail').addEventListener('blur', function () {
+  const v = this.value.trim();
+  if (!v) return setErr('regEmail', 'errEmail', 'Email wajib diisi.');
+  if (!EMAIL_RE.test(v)) return setErr('regEmail', 'errEmail', 'Format email tidak valid.');
+  clrErr('regEmail', 'errEmail');
+  google.script.run.withSuccessHandler(r => { if (!r.tersedia && $('regEmail').value.trim() === v) setErr('regEmail', 'errEmail', r.pesan); })
+    .cekKetersediaanAkun('email', v);
+});
+$('regUsername').addEventListener('input', () => clrErr('regUsername', 'errUsername'));
+$('regEmail').addEventListener('input', () => clrErr('regEmail', 'errEmail'));
+const HP_RE = /^(\+62|62|0)\d{8,13}$/;
+$('regHp').addEventListener('input', function () { this.value = this.value.replace(/[^0-9+]/g, ''); clrErr('regHp', 'errHp'); });
+$('regHp').addEventListener('blur', function () {
+  const v = this.value.trim();
+  if (!v) setErr('regHp', 'errHp', 'No. HP wajib diisi.');
+  else if (!HP_RE.test(v)) setErr('regHp', 'errHp', 'No. HP tidak valid. Contoh: 081234567890');
+});
+$('regBagian').addEventListener('change', () => clrErr('regBagian', 'errBagian'));
+// Pemohon: field Bagian/Unit Kerja tampil. Driver: field Bagian disembunyikan.
+function aturPeran() {
+  const driver = document.querySelector('input[name=regPeran]:checked').value === 'Driver', s = $('regBagian');
+  $('fieldBagian').style.display = driver ? 'none' : '';
+  s.disabled = driver;
+  if (driver) { s.value = ''; clrErr('regBagian', 'errBagian'); }
+}
+document.querySelectorAll('input[name=regPeran]').forEach(r => r.addEventListener('change', aturPeran));
+$('regPassword').addEventListener('blur', function () {
+  this.value && this.value.length < 8 ? setErr('regPassword', 'errPassword', 'Password minimal 8 karakter.') : clrErr('regPassword', 'errPassword');
+});
+$('regConfirm').addEventListener('blur', function () {
+  this.value && this.value !== $('regPassword').value ? setErr('regConfirm', 'errConfirm', 'Konfirmasi password tidak sama.') : clrErr('regConfirm', 'errConfirm');
+});
+
+// ---------- Login ----------
+$('loginForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const id = $('loginId').value.trim(), pw = $('loginPass').value, btn = $('btnLogin');
+  pesan('alertLogin', '');
+  if (!id || !pw) return pesan('alertLogin', 'Email/Username dan password wajib diisi.', 'err');
+  busy(btn, true, 'Memverifikasi...');
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (r.status === 'success') {
+        btn.querySelector('.t').innerText = 'Berhasil, memuat dashboard...';
+        setTimeout(() => { window.top.location.href = BASE + '?page=' + r.targetPage + '&sid=' + r.sid; }, 500);
+        return;
+      }
+      busy(btn, false);
+      if (r.belumVerifikasi) {
+        Swal.fire({ icon: 'info', title: 'Akun belum aktif', text: 'Klik link aktivasi yang dikirim ke email Anda.',
+          showCancelButton: true, confirmButtonText: 'Kirim ulang email', cancelButtonText: 'Batal', confirmButtonColor: '#F7E52A' })
+          .then(x => { if (x.isConfirmed) { $('targetEmail').innerText = r.emailUser || id; pindahHalaman('view-verify'); kirimUlang(); } });
+      } else pesan('alertLogin', r.message, 'err');
+    })
+    .withFailureHandler(function () { busy(btn, false); pesan('alertLogin', 'Koneksi terputus. Periksa jaringan Anda.', 'err'); })
+    .prosesLogin(id, pw);
+});
+
+// ---------- Register ----------
+$('registerForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const nama = $('regNama').value.trim(), user = $('regUsername').value.trim(), mail = $('regEmail').value.trim(),
+        peran = document.querySelector('input[name=regPeran]:checked').value, bag = $('regBagian').value, pw = $('regPassword').value, cf = $('regConfirm').value, hp = $('regHp').value.trim();
+  if (!nama) setErr('regNama', 'errNama', 'Nama lengkap wajib diisi.');
+  if (!/^\S{3,30}$/.test(user)) setErr('regUsername', 'errUsername', user ? 'Username minimal 3 karakter dan tanpa spasi.' : 'Username wajib diisi.');
+  if (!EMAIL_RE.test(mail)) setErr('regEmail', 'errEmail', 'Format email tidak valid.');
+  if (!HP_RE.test(hp)) setErr('regHp', 'errHp', hp ? 'No. HP tidak valid. Contoh: 081234567890' : 'No. HP wajib diisi.');
+  if (peran === 'Pemohon' && !bag) setErr('regBagian', 'errBagian', 'Pilih bagian terlebih dahulu.');
+  if (pw.length < 8) setErr('regPassword', 'errPassword', 'Password minimal 8 karakter.');
+  if (pw !== cf) setErr('regConfirm', 'errConfirm', 'Konfirmasi password tidak sama.');
+  const salah = document.querySelector('#registerForm .bad');
+  if (salah) return salah.focus();
+
+  const btn = $('btnRegister');
+  busy(btn, true, 'Menyimpan...');
+  google.script.run
+    .withSuccessHandler(function (r) {
+      busy(btn, false);
+      if (r.status !== 'success') return Swal.fire({ icon: 'error', title: 'Pendaftaran gagal', text: r.message, confirmButtonColor: '#F7E52A' });
+      $('registerForm').reset(); aturPeran();
+      $('targetEmail').innerText = mail;
+      pindahHalaman('view-verify');
+      startCooldown(60);
+    })
+    .withFailureHandler(function () { busy(btn, false); gagal(); })
+    .prosesRegister(nama, user, mail, pw, peran, bag, hp);
+});
+
+// ---------- Verifikasi: kirim ulang + cooldown ----------
+let cdTimer = null;
+function startCooldown(detik) {
+  const btn = $('btnResend'); let sisa = detik;
+  clearInterval(cdTimer); btn.disabled = true; btn.innerText = 'Kirim ulang dalam ' + sisa + ' dtk';
+  cdTimer = setInterval(() => {
+    sisa--;
+    if (sisa <= 0) { clearInterval(cdTimer); btn.disabled = false; btn.innerText = 'Kirim ulang email'; }
+    else btn.innerText = 'Kirim ulang dalam ' + sisa + ' dtk';
+  }, 1000);
+}
+function kirimUlang() {
+  const btn = $('btnResend'); btn.disabled = true; pesan('alertVerify', '');
+  google.script.run
+    .withSuccessHandler(r => {
+      pesan('alertVerify', r.message, r.status === 'success' ? 'ok' : 'err');
+      r.status === 'success' ? startCooldown(60) : (btn.disabled = false);
+    })
+    .withFailureHandler(() => { btn.disabled = false; pesan('alertVerify', 'Koneksi terputus. Coba lagi.', 'err'); })
+    .kirimUlangEmailVerifikasi($('targetEmail').innerText);
+}
+
+// ---------- Lupa password ----------
+$('forgotForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const mail = $('forgotEmail').value.trim(), btn = $('btnForgot');
+  pesan('alertForgot', '');
+  if (!EMAIL_RE.test(mail)) return pesan('alertForgot', 'Format email tidak valid.', 'err');
+  busy(btn, true, 'Mengirim...');
+  google.script.run
+    .withSuccessHandler(r => { busy(btn, false); pesan('alertForgot', r.message, r.status === 'success' ? 'ok' : 'err'); if (r.status === 'success') $('forgotForm').reset(); })
+    .withFailureHandler(() => { busy(btn, false); gagal(); })
+    .prosesLupaPassword(mail);
+});
+
+// ---------- Reset password ----------
+$('resetFormEl').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const pw = $('resPass').value, cf = $('resConfirm').value, btn = $('btnReset');
+  pesan('alertReset', '');
+  if (pw.length < 8) return pesan('alertReset', 'Password minimal 8 karakter.', 'err');
+  if (pw !== cf) return pesan('alertReset', 'Konfirmasi password tidak sama.', 'err');
+  busy(btn, true, 'Menyimpan...');
+  google.script.run
+    .withSuccessHandler(r => {
+      busy(btn, false);
+      if (r.status !== 'success') return pesan('alertReset', r.message, 'err');
+      Swal.fire({ icon: 'success', title: 'Berhasil', text: r.message, timer: 2200, showConfirmButton: false })
+        .then(() => { $('resetFormEl').reset(); pindahHalaman('view-login'); });
+    })
+    .withFailureHandler(() => { busy(btn, false); gagal(); })
+    .prosesResetPassword(RESET_TOKEN, pw);
+});
+
+// ---------- Tampilan awal ----------
+(function init() {
+  const awal = "<?!= initialView ?>";
+  if (awal === 'view-verify-result') {
+    const ok = VERIF.status === 'success';
+    $('vrIcon').className = 'ic' + (ok ? '' : ' bad');
+    $('vrIcon').innerHTML = ok ? '<i class="fas fa-circle-check"></i>' : '<i class="fas fa-circle-xmark"></i>';
+    $('vrJudul').innerText = ok ? 'Verifikasi berhasil' : 'Verifikasi gagal';
+    $('vrPesan').innerText = VERIF.pesan;
+  }
+  if (awal === 'view-reset-password') {
+    const tolak = msg => { $('resetForm').style.display = 'none'; $('resetInvalid').style.display = 'block'; $('resetInvalidMsg').innerText = msg; };
+    if (!RESET_TOKEN) tolak('Link reset tidak lengkap. Minta link baru.');
+    else google.script.run.withSuccessHandler(r => { if (r.status !== 'success') tolak(r.message); }).validasiTokenReset(RESET_TOKEN);
+  }
+  aturPeran();
+  pindahHalaman(awal);
+})();
+</script>
+</body>
+</html>
