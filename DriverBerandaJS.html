@@ -1,0 +1,113 @@
+<script>
+(function () {
+  const R = $('#h-beranda'), q = s => $(s, R);
+  let timer, terakhir;
+
+  const telp = s => { s = String(s || '').replace(/\D/g, ''); return s && s[0] === '8' ? '0' + s : s; }; // nol depan hilang bila NO_HP tersimpan sebagai angka
+  const bintang = n => [1, 2, 3, 4, 5].map(i => '<span class="' + (i <= Math.round(n) ? 'on' : '') + '">★</span>').join('');
+  const labelTgl = (iso, hari) => iso === hari ? 'Hari ini, ' + tglPanjang(iso).replace(/^[^,]+, /, '') : tglPanjang(iso);
+
+  function jalankanTimer(mulai) {
+    clearInterval(timer);
+    const el = q('#timer');
+    if (!el || !mulai) return;
+    const t0 = Date.parse(mulai);
+    const tik = () => {
+      const s = Math.max(0, Math.floor((Date.now() - t0) / 1000));
+      el.textContent = [s / 3600, (s % 3600) / 60, s % 60].map(x => String(Math.floor(x)).padStart(2, '0')).join(':');
+    };
+    tik(); timer = setInterval(tik, 1000);
+  }
+
+  function kartuTugas(d) {
+    const t = d.saatIni;
+    if (!t) return '<div class="kosong">' + ikon('car') + '<b>Tidak ada tugas hari ini</b><p>Penugasan dari admin akan muncul di sini.</p></div>';
+    const jalan = d.state === 'berjalan', tel = telp(t.hp);
+    return '<div class="t-kepala"><span class="tag">Tugas saat ini</span><span class="kode">#' + esc(t.id) + '</span>' +
+      '<span class="pill ' + (jalan ? 'jalan' : '') + '">' + (jalan ? 'Berjalan' : 'Disetujui') + '</span></div>' +
+      '<h2>' + esc(t.tujuan || 'Tujuan belum diisi') + '</h2>' +
+      '<div class="waktu"><span>' + ikon('clock') + esc(t.jam || '-') + ' - ' + esc(t.tiba || '-') + ' WIB</span>' +
+      '<span>' + ikon('calendar') + esc(t.tanggal ? labelTgl(t.tanggal, d.hari) : '-') + '</span>' +
+      (t.tiba ? '<span>Estimasi tiba ' + esc(t.tiba) + ' WIB</span>' : '') + '</div>' +
+      (jalan ? '<div class="jalan-info"><div><small>Durasi berjalan</small><b id="timer">00:00:00</b></div><div><small>Km awal</small><b>' + angka(t.kmAwal) + '</b></div></div>' : '') +
+      '<div class="info-t">' +
+        '<div><small>Pemohon &amp; bagian</small><b>' + esc(t.pemohon) + '</b><div class="ket">' + esc(t.bagian) + '</div>' +
+          (tel ? '<a href="tel:' + esc(tel) + '">' + ikon('phone') + esc(tel) + '</a>' : '') + '</div>' +
+        '<div><small>Keperluan</small>' + esc(t.keperluan || '-') + '</div>' +
+        '<div><small>Jumlah penumpang</small><b>' + esc(t.penumpang) + ' orang</b></div>' +
+        '<div><small>Mobil</small><div class="baris-mobil"><b>' + esc(t.mobil || '-') + '</b>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></div>' +
+      '</div>' +
+      '<div class="aksi">' +
+        (jalan ? '<button class="btn utama" data-aksi="selesai">' + ikon('flag') + 'Selesai perjalanan</button>'
+               : '<button class="btn utama" data-aksi="mulai">' + ikon('send') + 'Mulai perjalanan</button>') +
+        '<button class="btn sekunder" data-aksi="detail">' + ikon('eye') + 'Lihat detail</button></div>' +
+      (jalan ? '' : '<p class="cat">Tombol aktif pada hari keberangkatan</p>');
+  }
+
+  function daftarMendatang(d) {
+    q('#m-jumlah').textContent = d.mendatang.length + ' tugas';
+    q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map(t =>
+      '<button class="m-item" data-aksi="detail"><div class="m-tgl"><span>' + esc(tglPendek(t.tanggal)) + ', ' + esc(t.jam) + ' WIB</span><span class="pill">Disetujui</span></div>' +
+      '<b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
+      '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span><span>' + esc(t.mobil) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></button>'
+    ).join('') : '<div class="kosong kecil">' + ikon('calendar') + '<p>Belum ada tugas mendatang.</p></div>';
+    q('#m-semua').textContent = 'Lihat semua tugas (' + d.totalTugas + ')';
+  }
+
+  function render(d) {
+    if (!d.ok) return galat(d.pesan, d.kode);
+    terakhir = d;
+    R.classList.remove('memuat');
+    q('#b-galat').hidden = true;
+    q('#b-info').hidden = d.profilDriverAda;
+    Shell.isiHeader(d.pengguna);
+
+    q('#b-halo').textContent = 'Halo, ' + d.pengguna.nama;
+    q('#b-status-driver').textContent = d.statusDriver ? 'Driver ' + d.statusDriver : 'Driver';
+    q('#b-status-teks').textContent = { ada: 'Ada ' + d.jumlahHariIni + ' tugas hari ini', bertugas: 'Sedang dalam perjalanan', kosong: 'Belum ada tugas hari ini' }[d.statusHariIni];
+    R.querySelectorAll('#b-chips span').forEach(c => c.classList.toggle('on', c.dataset.k === d.statusHariIni));
+
+    q('#s-total').textContent = angka(d.total);
+    q('#s-total-ket').textContent = d.total ? 'Seluruh perjalanan. Klik untuk filter bulan dan tahun.' : 'Belum ada perjalanan selesai.';
+    q('#s-jarak').textContent = angka(d.jarak);
+    q('#s-rata').textContent = d.total ? 'Rata-rata ' + angka(d.rata) + ' KM / perjalanan' : 'Belum ada data jarak';
+    q('#s-rating').textContent = d.rating == null ? '-' : d.rating.toFixed(1);
+    q('#s-bintang').innerHTML = bintang(d.rating || 0);
+    q('#s-ulasan').textContent = d.ulasan ? 'dari ' + angka(d.ulasan) + ' ulasan penumpang' : 'Belum ada ulasan.';
+
+    q('#b-tugas').innerHTML = kartuTugas(d);
+    daftarMendatang(d);
+    jalankanTimer(d.state === 'berjalan' && d.saatIni ? d.saatIni.mulai : '');
+  }
+
+  function galat(pesan, kode) {
+    R.classList.remove('memuat');
+    const sesi = kode === 'SESI';
+    q('#b-masuk').hidden = !sesi; q('#b-ulang').hidden = sesi;
+    if (sesi) q('#b-masuk').href = BASE_URL + '?page=login';
+    q('#b-galat-teks').textContent = pesan || 'Tidak dapat terhubung ke server.';
+    q('#b-galat').hidden = false;
+    if (!terakhir) {
+      q('#b-status-teks').textContent = 'Data belum dapat dimuat';
+      q('#b-tugas').innerHTML = '<div class="kosong">' + ikon('car') + '<b>Data belum dapat dimuat</b><p>Periksa koneksi, lalu coba lagi.</p></div>';
+    }
+  }
+
+  async function muat() {
+    if (!terakhir) R.classList.add('memuat');
+    try { await ambil('beranda', 'driverBeranda', 45000, render); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  function init() {
+  R.addEventListener('click', e => {
+    const a = e.target.closest('[data-aksi]');
+    if (!a) return;
+    if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }
+    else toast('Fitur ini dibuat pada tahap berikutnya');
+  });
+  }
+
+  App.daftar('beranda', { init: init, tampil: muat, tinggal: () => clearInterval(timer) });
+})();
+</script>

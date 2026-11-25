@@ -3,7 +3,7 @@
 // ==========================================
 const SPREADSHEET_ID = '1msXBs4CB047sayFPQfgWzXATOCQNR5EAiScQoQmWe-M';
 const SHEET_PENGGUNA = 'PENGGUNA';
-const APP_NAME = 'PLNDinas';
+const APP_NAME = 'BookTrip PLN';
 
 // Daftar bagian di dropdown Register. Ubah sesuai kebutuhan.
 var DAFTAR_BAGIAN = [
