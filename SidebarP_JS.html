@@ -1,0 +1,136 @@
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+
+  function inisial(nama) {
+    var k = String(nama || '').trim().split(/\s+/);
+    return ((k[0] || '-')[0] + (k[1] ? k[1][0] : '')).toUpperCase();
+  }
+
+  // Isi header dan popover dari data sesi
+  function isiProfil() {
+    $('hdNama').textContent = (USER.nama || '-').split(/\s+/)[0];
+    $('hdBagian').textContent = 'Bagian ' + (USER.bagian || '-');
+    $('hdAvatar').textContent = inisial(USER.nama).slice(0, 1);
+    $('pfAvatar').textContent = inisial(USER.nama).slice(0, 1);
+    $('pfJudul').textContent = (USER.nama || '-').split(/\s+/)[0];
+    $('pfTag').textContent = String(USER.peran || '').toUpperCase();
+    $('pfNip').textContent = USER.nip ? 'NIP: ' + USER.nip : '';
+    $('pfUser').value = USER.username || '';
+    $('pfNama').value = USER.nama || '';
+    $('pfEmail').value = USER.email || '';
+    $('pfPeran').value = USER.peran || '';
+    $('pfBagian').innerHTML = DAFTAR_BAGIAN.map(function (b) {
+      return '<option value="' + esc(b) + '"' + (b === USER.bagian ? ' selected' : '') + '>' + esc(b) + '</option>';
+    }).join('');
+  }
+  isiProfil();
+  $('hdTanggal').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+
+  function pesan(id, teks, tipe) {
+    var el = $(id);
+    el.className = 'msg' + (teks ? ' ' + tipe : '');
+    el.textContent = teks || '';
+  }
+
+  // ----- Popover profil & notifikasi -----
+  function tutupSemua() {
+    ['popProfil', 'popNotif'].forEach(function (id) { $(id).classList.remove('on'); });
+    $('btnProfil').setAttribute('aria-expanded', 'false');
+    $('btnNotif').setAttribute('aria-expanded', 'false');
+  }
+  function toggle(popId, btnId) {
+    var buka = !$(popId).classList.contains('on');
+    tutupSemua();
+    $(popId).classList.toggle('on', buka);
+    $(btnId).setAttribute('aria-expanded', buka ? 'true' : 'false');
+    return buka;
+  }
+  $('btnProfil').addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (toggle('popProfil', 'btnProfil')) { pesan('pfMsg', ''); pesan('pwMsg', ''); }
+  });
+  $('btnNotif').addEventListener('click', function (e) { e.stopPropagation(); toggle('popNotif', 'btnNotif'); });
+  $('pfTutup').addEventListener('click', tutupSemua);
+  document.addEventListener('click', function (e) { if (!e.target.closest('.pw')) tutupSemua(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { tutupSemua(); $('modalLogout').classList.remove('on'); }
+  });
+
+  $('btnSimpanProfil').addEventListener('click', function () {
+    var btn = this;
+    pesan('pfMsg', '');
+    btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        btn.disabled = false;
+        if (r.status === 'success') {
+          USER = r.user; isiProfil();
+          pesan('pfMsg', r.message, 'ok');
+          if (typeof initSapaBeranda === 'function') initSapaBeranda();
+        } else pesan('pfMsg', r.message, 'er');
+      })
+      .withFailureHandler(function () { btn.disabled = false; pesan('pfMsg', 'Koneksi terputus. Coba lagi.', 'er'); })
+      .simpanProfil(SID, $('pfNama').value, $('pfEmail').value, $('pfBagian').value);
+  });
+
+  $('btnTogglePw').addEventListener('click', function () { $('boxPw').classList.toggle('on'); });
+  $('btnSimpanPw').addEventListener('click', function () {
+    var btn = this, lama = $('pwLama').value, baru = $('pwBaru').value, konf = $('pwKonf').value;
+    pesan('pwMsg', '');
+    if (!lama || !baru) return pesan('pwMsg', 'Isi password lama dan password baru.', 'er');
+    if (baru.length < 8) return pesan('pwMsg', 'Password baru minimal 8 karakter.', 'er');
+    if (baru !== konf) return pesan('pwMsg', 'Konfirmasi password tidak sama.', 'er');
+    btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        btn.disabled = false;
+        pesan('pwMsg', r.message, r.status === 'success' ? 'ok' : 'er');
+        if (r.status === 'success') { $('pwLama').value = ''; $('pwBaru').value = ''; $('pwKonf').value = ''; }
+      })
+      .withFailureHandler(function () { btn.disabled = false; pesan('pwMsg', 'Koneksi terputus. Coba lagi.', 'er'); })
+      .ubahPassword(SID, lama, baru);
+  });
+
+  // ----- Navigasi + menu mobile -----
+  function tutupSidebar() { $('sidebar').classList.remove('on'); $('overlay').classList.remove('on'); }
+  $('btnMenu').addEventListener('click', function () { $('sidebar').classList.toggle('on'); $('overlay').classList.toggle('on'); });
+  $('overlay').addEventListener('click', tutupSidebar);
+  document.querySelectorAll('.nav-item').forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); loadView(a.dataset.view); tutupSidebar(); });
+  });
+
+  // ----- Logout -----
+  $('btnLogout').addEventListener('click', function (e) { e.preventDefault(); $('modalLogout').classList.add('on'); });
+  $('logoutBatal').addEventListener('click', function () { $('modalLogout').classList.remove('on'); });
+  $('modalLogout').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('on'); });
+  $('logoutYa').addEventListener('click', function () {
+    this.disabled = true; this.textContent = 'Logout...';
+    var tombol = this;
+    function keluar() {
+      google.script.run
+        .withSuccessHandler(function (html) { document.open(); document.write(html); document.close(); })
+        .withFailureHandler(function () {
+          tombol.disabled = false; tombol.textContent = 'Ya, logout';
+          if (typeof toast === 'function') toast('Gagal keluar. Periksa koneksi lalu coba lagi.');
+        })
+        .bukaLogin();
+    }
+    google.script.run.withSuccessHandler(keluar).withFailureHandler(keluar).logoutUser(SID);
+  });
+
+  // ----- Dipanggil halaman: badge menu & isi notifikasi -----
+  window.setBadgeDinilai = function (n) {
+    var b = $('badgeDinilai');
+    b.textContent = n > 99 ? '99+' : n;
+    b.classList.toggle('on', n > 0);
+  };
+  window.setNotif = function (daftar) {
+    $('notifDot').classList.toggle('on', daftar.length > 0);
+    $('popNotif').innerHTML = daftar.length
+      ? daftar.map(function (t) { return '<div class="ni"><i class="fas fa-circle-info"></i><span>' + esc(t) + '</span></div>'; }).join('')
+      : '<div class="ni kosong">Tidak ada notifikasi.</div>';
+  };
+})();
+</script>

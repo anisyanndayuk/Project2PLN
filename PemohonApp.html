@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookTrip PLN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <?!= include('SidebarP_CSS'); ?>
+</head>
+<body>
+
+  <script>
+    var APP_BASE_URL = "<?!= baseUrl ?>";
+    var SID = "<?!= sid ?>";
+    var USER = <?!= JSON.stringify(user).replace(/</g, '\\u003c') ?>;
+    var DAFTAR_BAGIAN = <?!= JSON.stringify(daftarBagian) ?>;
+  </script>
+
+  <?!= include('SidebarP'); ?>
+
+  <main class="main">
+    <div id="main-content">
+      <div class="loadc"><div><div class="ring"></div>Memuat dashboard...</div></div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function toast(pesan) {
+      var t = document.getElementById('toast');
+      t.textContent = pesan;
+      t.style.display = 'block';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function () { t.style.display = 'none'; }, 2500);
+    }
+
+    var URL_HALAMAN = {
+      BerandaPemohon: 'berandaPemohon',
+      BuatBookingPemohon: 'buatBookingPemohon',
+      BookingSayaPemohon: 'bookingSayaPemohon',
+      RiwayatPemohon: 'riwayatPemohon'
+    };
+
+    function loadView(namaHalaman) {
+      var area = document.getElementById('main-content');
+
+      // ganti tulisan ?page=... di address bar tanpa reload
+      try {
+        if (google.script.history) {
+          google.script.history.push({ view: namaHalaman }, { page: URL_HALAMAN[namaHalaman] });
+        }
+      } catch (e) {}
+
+      document.querySelectorAll('.nav-item').forEach(function (el) {
+        el.classList.toggle('active', el.dataset.view === namaHalaman);
+      });
+
+      area.innerHTML = '<div class="loadc"><div><div class="ring"></div>Memuat konten...</div></div>';
+
+      google.script.run
+        .withSuccessHandler(function (html) {
+          area.innerHTML = html;
+          window.scrollTo(0, 0);
+          if (namaHalaman === 'BerandaPemohon' && typeof initBerandaPemohon === 'function') initBerandaPemohon();
+        })
+        .withFailureHandler(function () {
+          area.innerHTML = '<div class="err">Gagal memuat halaman. Periksa koneksi lalu muat ulang.</div>';
+        })
+        .loadPageContent(namaHalaman, SID);
+    }
+  </script>
+
+  <?!= include('SidebarP_JS'); ?>
+  <?!= include('BerandaP_JS'); ?>
+
+  <script>loadView('BerandaPemohon');</script>
+</body>
+</html>

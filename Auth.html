@@ -200,11 +200,11 @@ h2{font-size:25px;font-weight:800;letter-spacing:-.3px}
 <div class="page-foot">&copy; 2026 PT PLN (Persero) UP3 Malang. &bull; Hak Cipta Dilindungi Undang-Undang</div>
 
 <script>
-const BASE = "<?!= baseUrl ?>";
-const RESET_TOKEN = "<?!= resetToken ?>";
-const VERIF = { status: "<?!= verifStatus ?>", pesan: <?!= JSON.stringify(verifPesan) ?> };
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const $ = id => document.getElementById(id);
+var BASE = "<?!= baseUrl ?>";
+var RESET_TOKEN = "<?!= resetToken ?>";
+var VERIF = { status: "<?!= verifStatus ?>", pesan: <?!= JSON.stringify(verifPesan) ?> };
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+var $ = id => document.getElementById(id);
 
 // ---------- Navigasi antar tampilan (tanpa refresh) ----------
 function pindahHalaman(id) {
@@ -265,7 +265,7 @@ $('regEmail').addEventListener('blur', function () {
 });
 $('regUsername').addEventListener('input', () => clrErr('regUsername', 'errUsername'));
 $('regEmail').addEventListener('input', () => clrErr('regEmail', 'errEmail'));
-const HP_RE = /^(\+62|62|0)\d{8,13}$/;
+var HP_RE = /^(\+62|62|0)\d{8,13}$/;
 $('regHp').addEventListener('input', function () { this.value = this.value.replace(/[^0-9+]/g, ''); clrErr('regHp', 'errHp'); });
 $('regHp').addEventListener('blur', function () {
   const v = this.value.trim();
@@ -299,7 +299,13 @@ $('loginForm').addEventListener('submit', function (e) {
     .withSuccessHandler(function (r) {
       if (r.status === 'success') {
         btn.querySelector('.t').innerText = 'Berhasil, memuat dashboard...';
-        setTimeout(() => { window.top.location.href = BASE + '?page=' + r.targetPage + '&sid=' + r.sid; }, 500);
+        google.script.run
+          .withSuccessHandler(function (d) {
+            if (d.status !== 'success') { busy(btn, false); return pesan('alertLogin', d.message, 'err'); }
+            document.open(); document.write(d.html); document.close();
+          })
+          .withFailureHandler(function () { busy(btn, false); pesan('alertLogin', 'Koneksi terputus. Periksa jaringan Anda.', 'err'); })
+          .bukaDashboard(r.sid);
         return;
       }
       busy(btn, false);
@@ -344,7 +350,7 @@ $('registerForm').addEventListener('submit', function (e) {
 });
 
 // ---------- Verifikasi: kirim ulang + cooldown ----------
-let cdTimer = null;
+var cdTimer = null;
 function startCooldown(detik) {
   const btn = $('btnResend'); let sisa = detik;
   clearInterval(cdTimer); btn.disabled = true; btn.innerText = 'Kirim ulang dalam ' + sisa + ' dtk';

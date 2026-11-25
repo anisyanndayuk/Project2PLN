@@ -1,0 +1,215 @@
+<script>
+var bp = { data: null, tab: 'semua', hal: 0, ukuran: 3, token: 0 };
+var BP_AKTIF = ['Diajukan', 'Disetujui', 'Berjalan'];
+
+function bpEl(id) { return document.getElementById(id); }
+function bpEsc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function bpParse(t) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t || '');
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function bpTgl(t) {
+  var d = bpParse(t);
+  return d ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : (t || '-');
+}
+function bpJam(b) { return b.jamBerangkat ? b.jamBerangkat + (b.jamTiba ? ' - ' + b.jamTiba : '') + ' WIB' : ''; }
+function bpInisial(n) { return String(n || '?').trim().split(/\s+/).map(function (x) { return x[0]; }).slice(0, 2).join('').toUpperCase(); }
+
+// Sel Mobil / Driver. Bila belum ada penugasan, tampilkan keterangan status.
+function bpSelMobil(b) {
+  var m = b.mobil;
+  if (m && (m.nama || m.plat)) {
+    return '<b>' + bpEsc(m.nama || m.plat) + '</b>' + (m.plat ? '<span class="plat">' + bpEsc(m.plat) + '</span>' : '');
+  }
+  return bpKet(b);
+}
+function bpSelDriver(b) {
+  if (b.driver && b.driver.nama) {
+    return '<div class="drv"><span class="dav">' + bpEsc(bpInisial(b.driver.nama)) + '</span>' + bpEsc(b.driver.nama) + '</div>';
+  }
+  return bpKet(b);
+}
+function bpKet(b) {
+  if (b.status === 'Ditolak') return '<span class="wait tolak">Ditolak</span>';
+  if (b.status === 'Dibatalkan') return '<span class="wait">Dibatalkan</span>';
+  if (b.status === 'Diajukan' || b.status === 'Disetujui') return '<span class="wait">Menunggu Penugasan</span>';
+  return '<span class="wait">-</span>';
+}
+
+// ---------- Render ----------
+function bpRenderSapa() {
+  var depan = String(USER.nama || '').trim().split(/\s+/)[0] || '';
+  bpEl('bpSapa').textContent = 'Halo, ' + depan;
+  bpEl('bpBagian').textContent = USER.bagian ? 'Bagian ' + USER.bagian : '';
+  var nip = bpEl('bpNip');
+  nip.style.display = USER.nip ? '' : 'none';
+  if (USER.nip) nip.lastElementChild.textContent = 'NIP: ' + USER.nip;
+}
+function initSapaBeranda() { if (bpEl('bpSapa')) bpRenderSapa(); }
+
+function bpRenderRingkas() {
+  var r = bp.data.ringkasan;
+  bpEl('bpAktif').textContent = r.aktif;
+  bpEl('bpMenunggu').textContent = r.menunggu;
+  bpEl('bpDinilai').textContent = r.perluDinilai;
+  setBadgeDinilai(r.perluDinilai);
+}
+
+function bpRenderNotif() {
+  var r = bp.data.ringkasan, n = [];
+  if (r.perluDinilai) n.push(r.perluDinilai + ' perjalanan menunggu penilaian Anda.');
+  if (r.menunggu) n.push(r.menunggu + ' booking menunggu persetujuan dispatcher.');
+  if (bp.data.mendatang) n.push('Perjalanan ' + bp.data.mendatang.status.toLowerCase() + ': ' + bp.data.mendatang.tujuan + ', ' + bpTgl(bp.data.mendatang.tanggal) + '.');
+  setNotif(n);
+}
+
+function bpDaftar() {
+  return bp.data.booking.filter(function (b) {
+    if (bp.tab === 'aktif') return BP_AKTIF.indexOf(b.status) !== -1;
+    if (bp.tab === 'riwayat') return BP_AKTIF.indexOf(b.status) === -1;
+    return true;
+  });
+}
+
+function bpRenderTabel() {
+  var daftar = bpDaftar(), total = daftar.length;
+  var maks = Math.max(0, Math.ceil(total / bp.ukuran) - 1);
+  if (bp.hal > maks) bp.hal = maks;
+  var tampil = daftar.slice(bp.hal * bp.ukuran, bp.hal * bp.ukuran + bp.ukuran);
+  var el = bpEl('bpTabel'), pg = bpEl('bpPaging');
+  if (!total) {
+    el.innerHTML = '<div class="empty">' + (bp.data.booking.length ? 'Tidak ada booking pada tab ini.' : 'Belum ada booking. Ajukan booking pertama Anda.') + '</div>';
+    pg.style.display = 'none';
+    return;
+  }
+  el.innerHTML = '<div class="tw"><table><thead><tr><th>Tanggal &amp; Waktu</th><th>Tujuan &amp; Kegiatan</th><th>Mobil</th><th>Driver</th></tr></thead><tbody>' +
+    tampil.map(function (b) {
+      return '<tr><td><b>' + bpEsc(bpTgl(b.tanggal)) + '</b><small>' + bpEsc(bpJam(b)) + '</small></td>' +
+        '<td><b>' + bpEsc(b.tujuan) + '</b>' + (b.keperluan ? '<small>' + bpEsc(b.keperluan) + '</small>' : '') + '</td>' +
+        '<td>' + bpSelMobil(b) + '</td><td>' + bpSelDriver(b) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  pg.style.display = '';
+  bpEl('bpInfo').textContent = 'Menampilkan ' + tampil.length + ' dari total ' + total + ' permohonan dinas';
+  bpEl('bpPrev').disabled = bp.hal <= 0;
+  bpEl('bpNext').disabled = bp.hal >= maks;
+}
+
+function bpLabelHari(tgl) {
+  var d = bpParse(tgl), h = bpParse(bp.data.hariIni);
+  if (!d || !h) return bpTgl(tgl);
+  var selisih = Math.round((d - h) / 86400000);
+  var pendek = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  return (selisih === 0 ? 'Hari Ini, ' : selisih === 1 ? 'Besok, ' : '') + pendek;
+}
+
+function bpRenderMendatang() {
+  var b = bp.data.mendatang, el = bpEl('bpMendatang');
+  var judul = '<div class="hh"><h2>Perjalanan<br>Mendatang</h2>';
+  if (!b) { el.innerHTML = judul + '</div><div class="empty">Belum ada perjalanan yang disetujui.</div>'; return; }
+  var m = b.mobil, d = b.driver, hp = d ? String(d.noHp || '').replace(/[^0-9+]/g, '') : '';
+  var mobil = (m && (m.nama || m.plat))
+    ? '<div class="vrow"><div class="ico"><i class="fas fa-car"></i></div><div class="t">' + bpEsc(m.nama || m.plat) +
+      (m.ket ? '<small>' + bpEsc(m.ket) + '</small>' : '') + '</div>' + (m.plat ? '<span class="plat">' + bpEsc(m.plat) + '</span>' : '') + '</div>'
+    : '<div class="vrow"><div class="ico"><i class="fas fa-car"></i></div><div class="t"><span class="wait">Mobil belum dialokasikan</span></div></div>';
+  var driver = d
+    ? '<div class="vrow"><div class="ico y">' + bpEsc(bpInisial(d.nama)) + '</div><div class="t">' + bpEsc(d.nama) + '<small>Driver Operasional</small></div>' +
+      (hp ? '<a class="tel" href="tel:' + hp + '" aria-label="Telepon ' + bpEsc(d.nama) + '"><i class="fas fa-phone"></i></a>' : '') + '</div>'
+    : '<div class="vrow"><div class="ico y"><i class="fas fa-user"></i></div><div class="t"><span class="wait">Driver belum ditugaskan</span></div></div>';
+  el.innerHTML = judul + '<span class="when">' + bpEsc(bpLabelHari(b.tanggal)) + '</span></div>' +
+    '<div class="tbox"><div class="k">Tujuan Penugasan</div><h3>' + bpEsc(b.tujuan) + '</h3>' +
+    (b.keperluan ? '<p><i class="far fa-clipboard"></i>' + bpEsc(b.keperluan) + '</p>' : '') + '</div>' +
+    '<div class="times"><div><small>Jadwal Berangkat</small><b>' + bpEsc(b.jamBerangkat || '-') + ' <span>WIB</span></b></div>' +
+    '<div><small>Estimasi Kembali</small><b>' + bpEsc(b.jamTiba || '-') + ' <span>WIB</span></b></div></div>' +
+    '<div class="vbox">' + mobil + driver + '</div>' +
+    (m && m.plat && b.tanggal === bp.data.hariIni ? '<div class="note"><i class="far fa-circle-check"></i>Armada Siap di Lobby Kantor UP3</div>' : '');
+}
+
+function bpRenderNilai() {
+  var list = bp.data.perluDinilai, el = bpEl('bpPerluNilai'), pend = bpEl('bpPend');
+  pend.style.display = list.length ? '' : 'none';
+  pend.textContent = list.length + ' Tertunda';
+  if (!list.length) {
+    el.innerHTML = '<div class="ok"><i class="far fa-circle-check"></i>Semua perjalanan dinas telah dinilai.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="rgrid">' + list.map(function (b) {
+    var siapa = [b.driver ? b.driver.nama : '', b.mobil ? b.mobil.plat : ''].filter(Boolean).join(' \u2022 ');
+    return '<div class="rc" data-id="' + bpEsc(b.id) + '" data-n="0">' +
+      '<div class="k">Perjalanan Selesai \u2022 ' + bpEsc(bpTgl(b.tanggal)) + '</div>' +
+      '<h3>' + bpEsc(b.tujuan) + '</h3>' + (siapa ? '<div class="who"><i class="far fa-user"></i>' + bpEsc(siapa) + '</div>' : '') +
+      '<div class="rbox"><span>Bagaimana pelayanan driver &amp; kondisi armada?</span><div class="stars" role="group" aria-label="Beri bintang">' +
+      [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" data-n="' + n + '" aria-label="' + n + ' bintang">&#9733;</button>'; }).join('') +
+      '</div><span class="rmsg"></span></div>' +
+      '<button type="button" class="btn-y btn-w" data-kirim="1"><i class="far fa-paper-plane"></i> Kirim Ulasan</button></div>';
+  }).join('') + '</div>';
+}
+
+function bpGalat(pesan) {
+  ['bpMendatang', 'bpPerluNilai'].forEach(function (id) { bpEl(id).innerHTML = ''; });
+  bpEl('bpPaging').style.display = 'none';
+  bpEl('bpTabel').innerHTML = '<div class="err">' + bpEsc(pesan) + '<br><button type="button" class="btn-o btn-s" onclick="bpMuat()">Coba lagi</button></div>';
+}
+
+// ---------- Ambil data ----------
+function bpMuat() {
+  var tok = ++bp.token;
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (tok !== bp.token || !bpEl('bpTabel')) return;   // halaman sudah berganti
+      if (!r || r.status !== 'success') { bpGalat((r && r.message) || 'Data belum bisa dimuat.'); return; }
+      bp.data = r;
+      bpRenderRingkas(); bpRenderTabel(); bpRenderMendatang(); bpRenderNilai(); bpRenderNotif();
+    })
+    .withFailureHandler(function () {
+      if (tok !== bp.token || !bpEl('bpTabel')) return;
+      bpGalat('Koneksi terputus. Periksa jaringan Anda.');
+    })
+    .getBerandaPemohon(SID);
+}
+
+// ---------- Dipanggil loadView() setelah HTML Beranda masuk ----------
+function initBerandaPemohon() {
+  bp.tab = 'semua'; bp.hal = 0;
+  bpRenderSapa();
+
+  bpEl('bpTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-tab]');
+    if (!b || !bp.data) return;
+    bp.tab = b.dataset.tab; bp.hal = 0;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    bpRenderTabel();
+  });
+  bpEl('bpPrev').addEventListener('click', function () { bp.hal--; bpRenderTabel(); });
+  bpEl('bpNext').addEventListener('click', function () { bp.hal++; bpRenderTabel(); });
+
+  bpEl('bpPerluNilai').addEventListener('click', function (e) {
+    var card = e.target.closest('.rc');
+    if (!card) return;
+    var pesan = card.querySelector('.rmsg');
+    var s = e.target.closest('.stars button');
+    if (s) {
+      var n = +s.dataset.n;
+      card.dataset.n = n; pesan.textContent = '';
+      card.querySelectorAll('.stars button').forEach(function (x) { x.classList.toggle('on', +x.dataset.n <= n); });
+      return;
+    }
+    var k = e.target.closest('[data-kirim]');
+    if (!k) return;
+    var bintang = +card.dataset.n;
+    if (!bintang) { pesan.textContent = 'Pilih bintang dulu.'; return; }
+    k.disabled = true; pesan.textContent = '';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r.status === 'success') { toast(r.message); bpMuat(); }
+        else { k.disabled = false; pesan.textContent = r.message; }
+      })
+      .withFailureHandler(function () { k.disabled = false; pesan.textContent = 'Koneksi terputus.'; })
+      .kirimRating(SID, card.dataset.id, bintang, '');
+  });
+
+  bpMuat();
+}
+</script>
