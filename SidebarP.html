@@ -1,0 +1,80 @@
+<aside class="sb" id="sidebar">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#F7E52A"/><path d="M27 8 17 26h6l-3 12 11-18h-6z" fill="#E5252A"/><path d="M13 39c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0M13 43c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0" stroke="#1AA3D9" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+    <div><b>PLNDinas</b><small>Peminjaman Mobil Dinas</small></div>
+  </div>
+  <nav class="nav">
+    <a class="nav-item active" data-view="BerandaPemohon" href="#"><i class="fas fa-house"></i>Beranda</a>
+    <a class="nav-item" data-view="BuatBookingPemohon" href="#"><i class="fas fa-circle-plus"></i>Buat Booking</a>
+    <a class="nav-item" data-view="BookingSayaPemohon" href="#"><i class="far fa-calendar"></i>Booking Saya</a>
+    <a class="nav-item" data-view="RiwayatPemohon" href="#"><i class="fas fa-clock-rotate-left"></i>Riwayat &amp; Rating<span class="bdg" id="badgeDinilai">0</span></a>
+  </nav>
+  <div class="sp"></div>
+  <a class="logout" id="btnLogout" href="#"><i class="fas fa-right-from-bracket"></i>Logout</a>
+</aside>
+<div class="ov" id="overlay"></div>
+
+<header class="hd">
+  <div class="hl">
+    <button type="button" class="mt" id="btnMenu" aria-label="Buka menu"><i class="fas fa-bars"></i></button>
+    <div><h1>Portal Pemohon</h1><p>Sistem Peminjaman Kendaraan Dinas - PLN UP3 Malang</p></div>
+  </div>
+
+  <div class="hr">
+    <div class="dpill"><i class="far fa-calendar"></i><span id="hdTanggal"></span></div>
+
+    <div class="pw">
+      <button type="button" class="bell" id="btnNotif" aria-label="Notifikasi" aria-expanded="false"><i class="far fa-bell"></i><span class="dot" id="notifDot"></span></button>
+      <div class="npop" id="popNotif"><div class="ni kosong">Tidak ada notifikasi.</div></div>
+    </div>
+
+    <div class="pw">
+      <button type="button" class="me" id="btnProfil" aria-haspopup="true" aria-expanded="false">
+        <div><b id="hdNama">-</b><small id="hdBagian">-</small></div>
+        <div class="av" id="hdAvatar">-</div>
+      </button>
+
+      <div class="pop" id="popProfil" role="dialog" aria-label="Profil saya">
+        <div class="pph">
+          <div class="av" id="pfAvatar">-</div>
+          <div><b id="pfJudul">-</b><span class="tag" id="pfTag">PEMOHON</span><small id="pfNip"></small></div>
+          <button type="button" class="x" id="pfTutup" aria-label="Tutup">&times;</button>
+        </div>
+        <hr>
+        <label for="pfUser">Username</label>
+        <div class="lk"><input id="pfUser" class="mono" type="text" disabled><i class="fas fa-lock"></i></div>
+        <label for="pfNama">Nama lengkap</label>
+        <input id="pfNama" type="text" autocomplete="off">
+        <label for="pfEmail">Email</label>
+        <input id="pfEmail" type="email" autocomplete="off">
+        <label for="pfPeran">Role</label>
+        <div class="lk"><input id="pfPeran" type="text" disabled><i class="far fa-id-badge"></i></div>
+        <label for="pfBagian">Bagian</label>
+        <select id="pfBagian"></select>
+        <div class="msg" id="pfMsg"></div>
+        <button type="button" class="btn-y btn-w" id="btnSimpanProfil">Simpan Perubahan</button>
+
+        <button type="button" class="lnk" id="btnTogglePw">Ubah Password</button>
+        <div class="pw2" id="boxPw">
+          <label for="pwLama">Password lama</label><input id="pwLama" type="password" autocomplete="current-password">
+          <label for="pwBaru">Password baru (min. 8 karakter)</label><input id="pwBaru" type="password" autocomplete="new-password">
+          <label for="pwKonf">Ulangi password baru</label><input id="pwKonf" type="password" autocomplete="new-password">
+          <div class="msg" id="pwMsg"></div>
+          <button type="button" class="btn-o btn-w" id="btnSimpanPw">Simpan Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="mo" id="modalLogout" role="dialog" aria-modal="true" aria-labelledby="mlJudul">
+  <div class="mb">
+    <div class="ico">!</div>
+    <h3 id="mlJudul">Konfirmasi logout</h3>
+    <p>Apakah Anda yakin ingin keluar?</p>
+    <div class="row">
+      <button type="button" class="c" id="logoutBatal">Batal</button>
+      <button type="button" class="y" id="logoutYa">Ya, logout</button>
+    </div>
+  </div>
+</div>
