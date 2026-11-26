@@ -5,7 +5,14 @@
 <meta charset="utf-8">
 <title>PLN Drive</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     [1] CSS GLOBAL
+     Dipakai semua fitur driver. CSS khusus satu fitur ditaruh
+     di file fiturnya (contoh: DriverBeranda.html), bukan di sini.
+     ============================================================ -->
 <style>
+/* ---- 1.1 Variabel warna & reset ---- */
 :root{--kuning:#FFE600;--biru:#0B5F8A;--navy:#0A3D5C;--teks:#0F1B2D;--abu:#64748B;--garis:#E5E9F0;--bg:#F3F5F9;--panel:#EEF3FD;--merah:#DC2626;--hijau:#15803D}
 *{box-sizing:border-box;margin:0}
 body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--teks);font-size:14px;line-height:1.45}
@@ -14,8 +21,9 @@ button{font:inherit;color:inherit}
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 :focus-visible{outline:3px solid var(--biru);outline-offset:2px}
 
+/* ---- 1.2 Kerangka & SIDEBAR ---- */
 .app{display:flex;min-height:100vh}
-.sisi{width:232px;background:#fff;border-right:1px solid var(--garis);padding:18px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex:none}
+.sisi{width:232px;background:#fff;border-right:1px solid var(--garis);padding:18px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex:none;overflow-y:auto}
 .logo{display:flex;gap:10px;align-items:center;margin-bottom:22px}
 .logo i{width:36px;height:36px;border-radius:10px;background:var(--kuning);display:grid;place-items:center}
 .logo b{display:block;font-size:15px}.logo small{color:var(--biru);font-size:11px}
@@ -24,8 +32,9 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .menu a{display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:10px;font-weight:600;cursor:pointer;user-select:none}
 .menu a:hover{background:var(--bg)}
 .menu a.aktif{background:var(--kuning);font-weight:800}
-.keluar{display:flex;gap:8px;align-items:center;justify-content:center;padding:12px;border:0;border-radius:10px;background:#FEE2E2;color:var(--merah);font-weight:700;cursor:pointer}
+.keluar{flex:none;margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:center;padding:12px;border:0;border-radius:10px;background:#FEE2E2;color:var(--merah);font-weight:700;cursor:pointer}
 
+/* ---- 1.3 NAVBAR (header atas) & area konten ---- */
 .utama{flex:1;min-width:0}
 .atas{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 28px;background:#fff;border-bottom:1px solid var(--garis)}
 .judul b{font-size:16px;display:flex;gap:8px;align-items:center}
@@ -39,6 +48,7 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke
 main{padding:24px 28px}
 .hamburger{display:none;border:0;background:var(--bg);width:38px;height:38px;border-radius:10px;cursor:pointer;place-items:center}
 
+/* ---- 1.4 Komponen umum (pill, plat, kartu, tombol, kondisi kosong, info) ---- */
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#DBEAFE;color:#1D4ED8;white-space:nowrap}
 .pill.jalan{background:#DCFCE7;color:var(--hijau)}
 .pill.kantor{background:var(--panel);color:var(--biru)}
@@ -55,9 +65,25 @@ main{padding:24px 28px}
 .info{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#FEF9C3;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin-bottom:16px}
 .info.galat{background:#FEE2E2;border-color:#FECACA}
 
+/* Modal konfirmasi (dipakai fungsi konfirmasi()) */
+.modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(15,27,45,.45);animation:mdl-masuk .2s ease-out}
+.modal .kotak{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(15,27,45,.25);animation:kotak-masuk .25s cubic-bezier(.2,.9,.3,1.1)}
+.modal.tutup{animation:mdl-keluar .16s ease-in forwards}
+.modal.tutup .kotak{animation:kotak-keluar .16s ease-in forwards}
+@keyframes mdl-masuk{from{opacity:0}to{opacity:1}}
+@keyframes mdl-keluar{from{opacity:1}to{opacity:0}}
+@keyframes kotak-masuk{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes kotak-keluar{from{opacity:1;transform:none}to{opacity:0;transform:translateY(8px) scale(.97)}}
+.modal h3{font-size:17px;margin-bottom:6px}
+.modal p{color:var(--abu);margin-bottom:20px}
+.modal .aksi-m{display:flex;gap:10px;justify-content:flex-end}
+.btn.bahaya{background:var(--merah);color:#fff}
+
+/* ---- 1.5 Toast (pesan singkat di bawah layar) ---- */
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#0F1B2D;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.25s;z-index:50}
 #toast.tampil{opacity:1;transform:translate(-50%,0)}
 
+/* ---- 1.6 Responsif (layar kecil: sidebar jadi menu hamburger) ---- */
 @media (max-width:900px){
   .sisi{position:fixed;z-index:40;left:0;top:0;transform:translateX(-100%);transition:transform .25s}
   .sisi.buka{transform:none;box-shadow:0 0 0 100vmax rgba(15,27,45,.4)}
@@ -69,6 +95,12 @@ main{padding:24px 28px}
 </style>
 </head>
 <body>
+
+<!-- ============================================================
+     [2] KUMPULAN IKON SVG
+     Dipanggil dengan: <svg class="i"><use href="#nama"/></svg>
+     Ikon baru: tambah satu <symbol id="..."> di bawah ini.
+     ============================================================ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
@@ -94,12 +126,21 @@ main{padding:24px 28px}
   </defs>
 </svg>
 
+<!-- ============================================================
+     [3] KERANGKA HALAMAN: SIDEBAR + NAVBAR + AREA KONTEN
+     ============================================================ -->
 <div class="app">
+
+  <!-- ---------- [3a] SIDEBAR ---------- -->
   <aside class="sisi" id="sisi">
+    <!-- Logo & nama aplikasi -->
     <div class="logo">
       <i><svg class="i"><use href="#bolt"/></svg></i>
       <div><b>PLN Drive</b><small>Peminjaman Mobil Dinas</small></div>
     </div>
+
+    <!-- Daftar menu. Atribut data-hal harus SAMA dengan nama fitur di App.daftar() dan id section h-NAMA.
+         Fitur baru: tambah satu baris <a data-hal="..."> di sini. -->
     <nav class="menu">
       <small>MENU PENGEMUDI</small>
       <a data-hal="beranda" class="aktif"><svg class="i"><use href="#home"/></svg>Beranda</a>
@@ -109,16 +150,25 @@ main{padding:24px 28px}
       <a data-hal="rating"><svg class="i"><use href="#star"/></svg>Rating Saya</a>
       <a data-hal="profil"><svg class="i"><use href="#user"/></svg>Profil &amp; Pengaturan</a>
     </nav>
+
+    <!-- Tombol keluar (aksinya ada di [5f] JS inti) -->
     <button class="keluar" id="keluar"><svg class="i"><use href="#logout"/></svg>Keluar</button>
   </aside>
 
   <div class="utama">
+
+    <!-- ---------- [3b] NAVBAR (header atas) ---------- -->
     <header class="atas">
+      <!-- Tombol hamburger (hanya tampil di layar kecil) -->
       <button class="hamburger" id="hamburger" aria-label="Buka menu"><svg class="i"><use href="#menu"/></svg></button>
+
+      <!-- Judul portal -->
       <div class="judul">
         <b>Portal Driver <span class="pill kantor">UP3 Malang</span></b>
         <small>Sistem Peminjaman Kendaraan Dinas - Logistik &amp; Transportasi Operasional UP3 Malang</small>
       </div>
+
+      <!-- Sisi kanan: chip tanggal, lonceng, akun. #u-tgl, #u-nama, #u-avatar diisi oleh JS inti -->
       <div class="kanan">
         <span class="chip-tgl"><svg class="i"><use href="#calendar"/></svg><span id="u-tgl"></span></span>
         <span class="lonceng" title="Notifikasi"><svg class="i"><use href="#bell"/></svg></span>
@@ -126,26 +176,59 @@ main{padding:24px 28px}
       </div>
     </header>
 
+    <!-- ---------- [3c] AREA KONTEN: satu section per fitur ----------
+         Aturan: id section = "h-" + nama fitur (sama dengan data-hal di sidebar).
+         Fitur selain Beranda diberi atribut hidden. -->
     <main>
       <section id="h-beranda" class="halaman"><?!= includeDriver_('DriverBeranda') ?></section>
-      <!-- Fitur berikutnya: tambah <section id="h-NAMA" class="halaman" hidden> + include DriverNAMA, lalu include DriverNAMAJS di bawah -->
+      <!-- Fitur berikutnya: tambah <section id="h-NAMA" class="halaman" hidden> + include DriverNAMA, lalu include DriverNAMAJS di bagian [6] -->
     </main>
   </div>
 </div>
+
+<!-- ============================================================
+     [4] TOAST (elemen pesan singkat, dipakai fungsi toast())
+     ============================================================ -->
 <div id="toast" role="status"></div>
 
-<script>const SID = <?!= JSON.stringify(sid) ?>, BASE_URL = <?!= JSON.stringify(baseUrl) ?>;</script>
+<!-- Modal konfirmasi: diisi dan dibuka oleh fungsi konfirmasi() di JS inti -->
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-judul">
+  <div class="kotak">
+    <h3 id="modal-judul"></h3>
+    <p id="modal-teks"></p>
+    <div class="aksi-m">
+      <button type="button" class="btn sekunder" id="modal-batal">Batal</button>
+      <button type="button" class="btn bahaya" id="modal-ya"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     [5] JAVASCRIPT INTI
+     Dipakai semua fitur: sesi, helper, pemanggil server, router.
+     JS khusus satu fitur ada di file DriverNAMAJS.html.
+     ============================================================ -->
+
+<!-- [5a] Data sesi dari server (sid dan baseUrl dikirim oleh Kode.gs) -->
+<script>var SID = <?!= JSON.stringify(sid) ?>, BASE_URL = <?!= JSON.stringify(baseUrl) ?>;</script>
 <script>
-const TZ = 'Asia/Jakarta';
-const App = { cache: {}, halaman: {}, sekarang: null };
+// ---- [5b] Konstanta, penampung data, dan fungsi bantu ----
+// PENTING: di level atas pakai var, JANGAN const/let. Halaman ini ditulis ke dokumen yang sama
+// dengan document.write (dari Auth.html), dan const/let yang namanya sudah ada (mis. $) akan
+// menggagalkan seluruh script dengan "Identifier ... has already been declared".
+var TZ = 'Asia/Jakarta';
+// true = alamat di browser diganti jadi ?page=dashboardDriver setelah dashboard tampil.
+// Syaratnya doGet di Kode.gs sudah diubah (lihat catatan). Kalau belum, set false.
+var UBAH_URL = true;
+var App = { cache: {}, halaman: {}, sekarang: null };
 App.daftar = (nama, hal) => { App.halaman[nama] = hal; }; // tiap fitur mendaftar: { init, tampil, tinggal }
-const $ = (s, r) => (r || document).querySelector(s);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const angka = n => Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 });
-const ikon = n => '<svg class="i"><use href="#' + n + '"/></svg>';
-const fmtTgl = (iso, opsi) => new Date(iso + 'T12:00:00+07:00').toLocaleDateString('id-ID', Object.assign({ timeZone: TZ }, opsi));
-const tglPanjang = iso => fmtTgl(iso, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
-const tglPendek = iso => fmtTgl(iso, { weekday: 'short', day: 'numeric', month: 'short' });
+var $ = (s, r) => (r || document).querySelector(s);
+var esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+var angka = n => Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 });
+var ikon = n => '<svg class="i"><use href="#' + n + '"/></svg>';
+var fmtTgl = (iso, opsi) => new Date(iso + 'T12:00:00+07:00').toLocaleDateString('id-ID', Object.assign({ timeZone: TZ }, opsi));
+var tglPanjang = iso => fmtTgl(iso, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+var tglPendek = iso => fmtTgl(iso, { weekday: 'short', day: 'numeric', month: 'short' });
 
 function toast(teks) {
   const t = $('#toast');
@@ -153,6 +236,33 @@ function toast(teks) {
   clearTimeout(toast.w); toast.w = setTimeout(() => t.classList.remove('tampil'), 2400);
 }
 
+// Pop-up konfirmasi, hasilnya Promise true (ya) atau false (batal, Esc, klik di luar kotak).
+// Contoh: if (!(await konfirmasi('Mulai perjalanan?', 'Pastikan angka odometer benar.', 'Mulai'))) return;
+function konfirmasi(judul, teks, labelYa) {
+  return new Promise(selesai => {
+    const m = $('#modal'), ya = $('#modal-ya'), batal = $('#modal-batal');
+    $('#modal-judul').textContent = judul;
+    $('#modal-teks').textContent = teks;
+    ya.textContent = labelYa || 'Ya';
+    const tombol = e => { if (e.key === 'Escape') tutup(false); };
+    function tutup(hasil) {
+      ya.onclick = batal.onclick = m.onclick = null;
+      document.removeEventListener('keydown', tombol);
+      m.classList.add('tutup');                       // animasi keluar, lalu disembunyikan
+      setTimeout(() => {
+        if (m.classList.contains('tutup')) { m.hidden = true; m.classList.remove('tutup'); }
+      }, 160);
+      selesai(hasil);
+    }
+    ya.onclick = () => tutup(true);
+    batal.onclick = () => tutup(false);
+    m.onclick = e => { if (e.target === m) tutup(false); };
+    document.addEventListener('keydown', tombol);
+    m.classList.remove('tutup'); m.hidden = false; batal.focus();
+  });
+}
+
+// ---- [5c] Pemanggil fungsi server (Apps Script) ----
 // Panggil fungsi Apps Script sebagai Promise
 // SID (sesi login) selalu dikirim sebagai argumen pertama; server menentukan identitas dari sesi itu
 function panggil(fn) {
@@ -174,14 +284,16 @@ async function ambil(kunci, fn, ttl, saatData) {
   }
 }
 
-const Shell = {
+// ---- [5d] Shell: pengisi data akun di navbar ----
+var Shell = {
   isiHeader(p) {
     $('#u-nama').textContent = p.nama;
     $('#u-avatar').textContent = (p.nama || '?').trim().charAt(0).toUpperCase();
   }
 };
 
-const Router = {
+// ---- [5e] Router: pindah halaman tanpa memuat ulang ----
+var Router = {
   pindah(nama) {
     const hal = App.halaman[nama];
     if (!hal) { toast('Fitur ini belum tersedia'); return; }
@@ -196,18 +308,42 @@ const Router = {
   }
 };
 
+// ---- [5f] Event kerangka: klik menu, keluar, hamburger, tanggal navbar ----
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-hal]');
   if (a) { e.preventDefault(); Router.pindah(a.dataset.hal); }
 });
+// Keluar: hapus sesi lalu ganti isi halaman dengan login (tanpa pindah URL, supaya tidak diblokir browser)
 $('#keluar').addEventListener('click', async () => {
+  if (!(await konfirmasi('Keluar dari akun?', 'Anda perlu masuk lagi untuk membuka Portal Driver.', 'Keluar'))) return;
+  const tombol = $('#keluar');
+  tombol.disabled = true;
+  try { sessionStorage.removeItem('sid'); } catch (e) {}
   try { await panggil('logoutUser'); } catch (e) {}
-  window.open(BASE_URL + '?page=login', '_top');
+  if (UBAH_URL) { try { google.script.history.replace(null, { page: 'login' }); } catch (e) {} }
+  google.script.run
+    .withSuccessHandler(html => { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(() => { tombol.disabled = false; toast('Gagal keluar. Coba lagi.'); })
+    .bukaLogin();
 });
 $('#hamburger').addEventListener('click', () => $('#sisi').classList.toggle('buka'));
 $('#u-tgl').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ });
 </script>
+
+<!-- ============================================================
+     [6] JAVASCRIPT TIAP FITUR
+     Harus di BAWAH JS inti [5] karena memakai App, panggil, dll.
+     Fitur baru: tambah satu baris include DriverNAMAJS di sini.
+     ============================================================ -->
 <?!= includeDriver_('DriverBerandaJS') ?>
-<script>Router.pindah('beranda');</script>
+
+<!-- ============================================================
+     [7] HALAMAN PERTAMA YANG DIBUKA SETELAH LOGIN
+     ============================================================ -->
+<script>
+Router.pindah('beranda');
+// Ganti alamat di address bar tanpa memuat ulang halaman
+if (UBAH_URL) { try { google.script.history.replace(null, { page: 'dashboardDriver' }); } catch (e) {} }
+</script>
 </body>
 </html>

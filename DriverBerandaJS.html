@@ -101,6 +101,14 @@
 
   function init() {
   R.addEventListener('click', e => {
+    if (e.target.closest('#b-masuk')) {
+      e.preventDefault();
+      try { sessionStorage.removeItem('sid'); } catch (x) {}
+      google.script.run
+        .withSuccessHandler(h => { document.open(); document.write(h); document.close(); })
+        .bukaLogin();
+      return;
+    }
     const a = e.target.closest('[data-aksi]');
     if (!a) return;
     if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }

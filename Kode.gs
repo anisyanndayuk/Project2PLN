@@ -51,7 +51,8 @@ function doGet(e) {
     case 'dashboardPemohon':
     case 'dashboardAdmin':
     case 'dashboardDriver':
-      return halamanDashboard_(page, baseUrl, p.sid);
+      if (p.sid && getSesi(p.sid)) return halamanDashboard_(page, baseUrl, p.sid);
+      break; // tanpa sesi: tampilkan Auth. Auth.html memulihkan sesi dari browser, atau menampilkan login
     default: break; // 'login' dan halaman tak dikenal -> Auth, tampilan login
   }
 
@@ -263,6 +264,12 @@ function prosesRegister(nama, username, email, password, peran, bagian, noHp) {
     // Simpan No. HP sebagai teks supaya angka 0 di depan tidak hilang
     t.sheet.getRange(t.sheet.getLastRow(), t.h.NO_HP + 1).setNumberFormat('@').setValue(noHp);
 
+    // Driver baru otomatis dibuatkan baris di sheet DRIVER (gagal di sini tidak membatalkan pendaftaran)
+    if (peran === 'Driver') {
+      try { tambahBarisDriver_(row[t.h.ID_PENGGUNA]); }
+      catch (d) { Logger.log('Gagal membuat baris DRIVER: ' + d.message); }
+    }
+
     try { kirimEmailVerifikasi_(nama, email, token); }
     catch (m) { Logger.log('Gagal kirim email verifikasi: ' + m.message); }
 
@@ -272,6 +279,21 @@ function prosesRegister(nama, username, email, password, peran, bagian, noHp) {
   } finally {
     try { lock.releaseLock(); } catch (x) {}
   }
+}
+
+// Membuat baris di sheet DRIVER berdasarkan NAMA header (urutan kolom bebas, kolom tidak dikenal dibiarkan kosong).
+function tambahBarisDriver_(idPengguna) {
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('DRIVER');
+  if (!sheet) throw new Error('Sheet DRIVER tidak ditemukan.');
+  var header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+    .map(function (x) { return String(x).trim().toUpperCase(); });
+  var row = new Array(header.length).fill('');
+  var isi = { ID_DRIVER: idPengguna, ID_PENGGUNA: idPengguna, AKTIF: 'YA' };
+  Object.keys(isi).forEach(function (k) {
+    var i = header.indexOf(k);
+    if (i !== -1) row[i] = isi[k];
+  });
+  sheet.appendRow(row);
 }
 
 // Validasi real-time di form Register
