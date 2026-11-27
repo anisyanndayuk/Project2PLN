@@ -65,14 +65,14 @@ table.rk-tbl{width:100%;border-collapse:collapse;min-width:980px}
 
 <section class="rk-stat">
   <div class="rk-kartu">
-    <div class="rk-label">Total Tiket</div>
+    <div class="rk-label">Total Pengajuan</div>
     <div class="rk-nilai"><span id="rk-s-tiket">-</span></div>
     <div class="rk-sub" id="rk-s-tiket-sub">-</div>
   </div>
   <div class="rk-kartu">
-    <div class="rk-label">Total Jarak</div>
+    <div class="rk-label">Jarak Ditempuh</div>
     <div class="rk-nilai"><span id="rk-s-km">-</span><small>KM</small></div>
-    <div class="rk-sub">Dari KM awal dan akhir perjalanan</div>
+    <div class="rk-sub">Total dari semua perjalanan</div>
   </div>
   <div class="rk-kartu">
     <div class="rk-label">Rata-rata Rating</div>
@@ -88,7 +88,7 @@ table.rk-tbl{width:100%;border-collapse:collapse;min-width:980px}
 
 <section class="rk-panel">
   <div class="rk-alat">
-    <div class="rk-cari"><svg class="i"><use href="#search"/></svg><input type="search" id="rk-cari" placeholder="Cari kode tiket, pemohon, tujuan, nopol, driver..." autocomplete="off"></div>
+    <div class="rk-cari"><svg class="i"><use href="#search"/></svg><input type="search" id="rk-cari" placeholder="Cari kode, nama, tujuan, plat, atau driver..." autocomplete="off"></div>
     <div class="rk-pilih"><select id="rk-bulan" aria-label="Periode"></select><svg class="i"><use href="#chevron"/></svg></div>
     <div class="rk-pilih"><select id="rk-bagian" aria-label="Bagian"></select><svg class="i"><use href="#chevron"/></svg></div>
     <button class="btn utama kecil" id="rk-ekspor" data-aksi="ekspor"><svg class="i"><use href="#layers"/></svg>Ekspor CSV</button>
@@ -98,7 +98,7 @@ table.rk-tbl{width:100%;border-collapse:collapse;min-width:980px}
     <table class="rk-tbl">
       <thead><tr>
         <th>Kode Booking</th><th>Tanggal &amp; Jam</th><th>Pemohon &amp; Bagian</th><th>Tujuan Perjalanan</th>
-        <th>Armada &amp; Nopol</th><th>Driver</th><th>Status</th><th>Rating</th>
+        <th>Mobil</th><th>Driver</th><th>Status</th><th>Rating</th>
       </tr></thead>
       <tbody id="rk-tbody"><tr class="rk-kosong"><td colspan="8">Memuat data...</td></tr></tbody>
     </table>

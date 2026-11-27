@@ -1,0 +1,115 @@
+<style>
+.bs-card{background:#fff;border:1px solid #e6eaf0;border-radius:16px;padding:22px 24px}
+.bs-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.bs-head h3{margin:0;font-size:18px;color:#0f172a}
+.bs-head p{margin:2px 0 0;color:#64748b;font-size:13px}
+.bs-btn{border:1px solid #dbe2ea;background:#fff;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;color:#334155;cursor:pointer}
+.bs-btn:disabled{opacity:.6;cursor:default}
+.bs-btn-kuning{background:#f9e326;border-color:#f9e326;color:#1e293b}
+.bs-btn-merah{background:#dc2626;border-color:#dc2626;color:#fff}
+.bs-btn-merah-garis{border-color:#fca5a5;color:#b91c1c}
+.bs-tab{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.bs-chip{border:0;background:#f1f5f9;color:#475569;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.bs-chip b{margin-left:6px;background:#e2e8f0;border-radius:999px;padding:1px 8px;font-size:11px}
+.bs-chip.on{background:#f9e326;color:#1e293b}
+.bs-cari{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:11px 14px;font:inherit;font-size:14px;margin-bottom:14px;background:#f8fafc}
+.bs-wrap{overflow-x:auto}
+.bs-tabel{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+.bs-tabel th{text-align:left;font-size:11px;letter-spacing:.04em;color:#64748b;padding:10px 12px;background:#f8fafc;text-transform:uppercase}
+.bs-tabel td{padding:12px;border-bottom:1px solid #eef2f6;vertical-align:top;color:#334155}
+.bs-tabel tbody tr[data-id]{cursor:pointer}
+.bs-tabel tbody tr[data-id]:hover{background:#fffbe6}
+.bs-kode{color:#0b5c85;font-weight:700}
+.bs-lihat{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;background:#e0f2fe;color:#0b5c85;border:1px solid #bae0f7;border-radius:8px;padding:7px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.bs-lihat:hover{background:#0b5c85;border-color:#0b5c85;color:#fff}
+.bs-kecil{color:#94a3b8;font-size:12px;margin-top:2px}
+.bs-kosong{color:#94a3b8;font-style:italic}
+.bs-plat{display:inline-block;margin-left:6px;background:#1e293b;color:#fff;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700}
+.bs-st{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.bs-st-diajukan{background:#fef3c7;color:#92400e}
+.bs-st-disetujui{background:#dbeafe;color:#1e40af}
+.bs-st-berjalan{background:#e0f2fe;color:#0369a1}
+.bs-st-selesai{background:#dcfce7;color:#166534}
+.bs-st-ditolak{background:#fee2e2;color:#b91c1c}
+.bs-st-dibatalkan{background:#f1f5f9;color:#475569}
+.bs-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#64748b}
+.bs-hal{display:flex;gap:6px}
+.bs-hal button{border:1px solid #e2e8f0;background:#fff;border-radius:8px;min-width:34px;height:34px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer}
+.bs-hal button.on{background:#0b5c85;border-color:#0b5c85;color:#fff}
+.bs-hal button:disabled{opacity:.4;cursor:default}
+
+/* Modal detail: di tengah layar */
+.bs-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.5);backdrop-filter:blur(2px)}
+.bs-overlay.on{display:flex}
+.bs-modal{width:min(600px,100%);max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.3);animation:bsMuncul .2s ease}
+@keyframes bsMuncul{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.bs-m-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 24px 14px;border-bottom:1px solid #eef2f6}
+.bs-m-judul{font-size:18px;font-weight:700;color:#0b5c85;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bs-m-sub{margin-top:4px;font-size:13px;color:#64748b}
+.bs-x{border:0;background:none;font-size:26px;line-height:1;color:#64748b;cursor:pointer}
+.bs-m-body{padding:18px 24px;overflow-y:auto}
+.bs-m-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid #eef2f6}
+.bs-bagian{margin-bottom:18px}
+.bs-bagian h4{margin:0 0 10px;font-size:11px;letter-spacing:.05em;color:#64748b;text-transform:uppercase}
+.bs-alert{border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:13px}
+.bs-alert p{margin:6px 0 0}
+.bs-alert-merah{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.bs-alert-abu{background:#f8fafc;border:1px solid #e2e8f0;color:#475569}
+.bs-tl{list-style:none;margin:0;padding:0}
+.bs-tl li{position:relative;padding:0 0 14px 28px;font-size:13px;color:#94a3b8}
+.bs-tl li:before{content:"";position:absolute;left:0;top:2px;width:14px;height:14px;border-radius:50%;background:#e2e8f0}
+.bs-tl li:after{content:"";position:absolute;left:6px;top:18px;bottom:0;width:2px;background:#e2e8f0}
+.bs-tl li:last-child:after{display:none}
+.bs-tl li b{display:block;color:#94a3b8}
+.bs-tl li.ok:before{background:#16a34a}.bs-tl li.ok b{color:#0f172a}
+.bs-tl li.now:before{background:#0b5c85;box-shadow:0 0 0 4px #dbeafe}.bs-tl li.now b{color:#0b5c85}
+.bs-tl li.bad:before{background:#dc2626}.bs-tl li.bad b{color:#b91c1c}
+.bs-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;background:#f8fafc;border-radius:12px;padding:14px 16px;font-size:13px}
+.bs-grid .lebar{grid-column:1/-1}
+.bs-grid small{display:block;color:#64748b;font-size:11px;margin-bottom:2px}
+.bs-grid span{color:#0f172a;font-weight:600}
+.bs-kendaraan{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#f8fafc;border-radius:12px;padding:12px 16px;margin-bottom:8px;font-size:13px}
+.bs-kendaraan small{display:block;color:#64748b}
+.bs-telp{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#e0f2fe;color:#0369a1;text-decoration:none;font-size:16px}
+.bs-batal-box textarea{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;resize:vertical;min-height:70px}
+.bs-batal-box .aksi{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+@media(max-width:560px){.bs-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="bs-card">
+  <div class="bs-head">
+    <div>
+      <h3>Booking Saya</h3>
+      <p>Pantau status pengajuan kendaraan dinas</p>
+    </div>
+    <button type="button" class="bs-btn bs-btn-kuning" id="bsBaru">+ Buat Pengajuan</button>
+  </div>
+  <div class="bs-tab" id="bsTab"></div>
+  <input type="text" class="bs-cari" id="bsCari" placeholder="Cari tujuan, keperluan, armada...">
+  <div class="bs-wrap">
+    <table class="bs-tabel">
+      <thead>
+        <tr><th>Tanggal &amp; Waktu</th><th>Tujuan &amp; Keperluan</th><th>Mobil</th><th>Driver</th><th>Status</th><th>Aksi</th></tr>
+      </thead>
+      <tbody id="bsBody"><tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Memuat...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="bs-foot">
+    <span id="bsInfo"></span>
+    <div class="bs-hal" id="bsHal"></div>
+  </div>
+</div>
+
+<div class="bs-overlay" id="bsModal">
+  <div class="bs-modal" role="dialog" aria-modal="true">
+    <div class="bs-m-head">
+      <div>
+        <div class="bs-m-judul" id="bsMJudul"></div>
+        <div class="bs-m-sub" id="bsMSub"></div>
+      </div>
+      <button type="button" class="bs-x" id="bsTutupX" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="bs-m-body" id="bsMBody"></div>
+    <div class="bs-m-foot" id="bsMFoot"></div>
+  </div>
+</div>

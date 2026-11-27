@@ -1,0 +1,84 @@
+<!-- ============================================================
+     DriverTugas.html : markup + CSS halaman Tugas Saya
+     Dipasang di DriverApp.html: <section id="h-tugas" class="halaman" hidden> + include file ini.
+     Logikanya ada di DriverTugasJS.html. CSS memakai awalan tg- agar tidak bentrok dengan fitur lain.
+     ============================================================ -->
+<style>
+.tg-kepala{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.tg-kepala h2{font-size:20px}
+.tg-kepala p{color:var(--abu);margin-top:2px}
+.btn.kecil{padding:8px 12px;font-size:12px}
+
+/* Tab filter */
+.tg-tab{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tg-tab button{border:1.5px solid var(--garis);background:#fff;border-radius:99px;padding:8px 16px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.tg-tab button:hover{border-color:var(--biru)}
+.tg-tab button.on{background:var(--kuning);border-color:var(--kuning)}
+.tg-tab button span{background:rgba(15,27,45,.08);border-radius:99px;padding:1px 8px;font-size:11px}
+.tg-tab button.on span{background:rgba(15,27,45,.15)}
+.tg-tab button.lewat:not(.on){color:var(--merah);border-color:#FECACA}
+
+/* Tabel */
+.tg-kotak{padding:0;overflow:hidden}
+.tg-tabel{width:100%;border-collapse:collapse}
+.tg-tabel th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--abu);padding:12px 16px;background:#F8FAFC;border-bottom:1px solid var(--garis);white-space:nowrap}
+.tg-tabel td{padding:14px 16px;border-bottom:1px solid var(--garis);vertical-align:top}
+.tg-tabel tbody tr{cursor:pointer}
+.tg-tabel tbody tr:hover{background:#F8FAFC}
+.tg-tabel tbody tr:last-child td{border-bottom:0}
+.tg-tabel tr.sorot{box-shadow:inset 4px 0 0 var(--kuning)}
+.tg-tabel tr.lewat{box-shadow:inset 4px 0 0 #FCA5A5}
+.tg-tabel b{display:block}
+.tg-tabel .ket{color:var(--abu);font-size:12px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tg-tgl b{white-space:nowrap}
+.tg-tgl small{color:var(--abu)}
+.tg-hari{display:inline-block;background:var(--kuning);border-radius:6px;padding:1px 7px;font-size:10px;font-weight:800;margin-top:4px}
+.tg-mobil{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill.lewat{background:#FEE2E2;color:#B91C1C}
+.tg-aksi{white-space:nowrap;text-align:right}
+
+/* Pembagian halaman */
+.tg-halaman{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--garis);background:#fff}
+.tg-halaman small{color:var(--abu)}
+.tg-halaman div{display:flex;gap:6px;align-items:center}
+.tg-halaman button{min-width:34px;height:34px;border:1px solid var(--garis);background:#fff;border-radius:8px;font-weight:700;cursor:pointer}
+.tg-halaman button.on{background:var(--kuning);border-color:var(--kuning)}
+.tg-halaman button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Memuat (kerangka abu-abu) */
+#h-tugas.memuat .tg-kotak{opacity:.55;pointer-events:none}
+
+/* Layar kecil: baris tabel menjadi kartu */
+@media (max-width:760px){
+  .tg-tabel thead{display:none}
+  .tg-tabel,.tg-tabel tbody,.tg-tabel tr,.tg-tabel td{display:block;width:100%}
+  .tg-tabel tr{padding:12px 14px;border-bottom:1px solid var(--garis)}
+  .tg-tabel td{border:0;padding:4px 0}
+  .tg-tabel td[data-l]::before{content:attr(data-l);display:block;color:var(--abu);font-size:10px;font-weight:700;text-transform:uppercase;margin-top:6px}
+  .tg-tabel td.tg-aksi{text-align:left;padding-top:10px}
+  .tg-tabel td.tg-aksi .btn{width:100%}
+}
+</style>
+
+<div class="tg-kepala">
+  <div>
+    <h2>Tugas Saya</h2>
+    <p id="tg-sub">Penugasan dari admin yang belum selesai.</p>
+  </div>
+  <button type="button" class="btn sekunder kecil" id="tg-segarkan">Segarkan</button>
+</div>
+
+<!-- Pemberitahuan: akun belum bisa ditugaskan, SIM hampir habis, atau gagal memuat -->
+<div class="info" id="tg-info" hidden></div>
+
+<div class="tg-tab" id="tg-tab" role="tablist" aria-label="Filter tugas">
+  <button type="button" role="tab" data-f="semua" class="on">Semua <span>0</span></button>
+  <button type="button" role="tab" data-f="hari_ini">Hari Ini <span>0</span></button>
+  <button type="button" role="tab" data-f="mendatang">Mendatang <span>0</span></button>
+  <button type="button" role="tab" data-f="terlewat" class="lewat" hidden>Terlewat <span>0</span></button>
+</div>
+
+<div class="kartu tg-kotak" id="tg-kotak">
+  <div id="tg-isi"></div>
+  <div class="tg-halaman" id="tg-halaman" hidden></div>
+</div>

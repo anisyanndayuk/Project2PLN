@@ -1,0 +1,76 @@
+<style>
+.lonceng{position:relative;cursor:pointer}
+.ntf-angka{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--merah);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.ntf-panel{position:fixed;z-index:55;width:340px;max-width:calc(100vw - 24px);max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--garis);border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.2)}
+.ntf-judul{display:block;padding:12px 16px;border-bottom:1px solid var(--garis)}
+.ntf-item{display:flex;gap:10px;width:100%;text-align:left;padding:11px 16px;border:0;border-bottom:1px solid var(--garis);background:#fff;font:inherit;color:var(--teks);cursor:pointer}
+.ntf-item:hover{background:var(--panel)}
+.ntf-item i{width:9px;height:9px;margin-top:5px;border-radius:50%;flex:none;background:#94A3B8}
+.ntf-item i.merah{background:var(--merah)}.ntf-item i.kuning{background:#EAB308}.ntf-item i.biru{background:#2563EB}
+.ntf-item b{display:block;font-size:12.5px}.ntf-item span{font-size:12.5px;color:#3A4150;overflow-wrap:anywhere}
+.ntf-kosong{padding:28px 16px;text-align:center;color:var(--abu);font-size:13px}
+</style>
+<script>
+(function () {
+  const bel = $('.lonceng');
+  const angkaEl = document.createElement('b');
+  angkaEl.className = 'ntf-angka'; angkaEl.hidden = true;
+  bel.appendChild(angkaEl);
+  bel.setAttribute('role', 'button'); bel.setAttribute('tabindex', '0'); bel.title = 'Notifikasi';
+  const panel = document.createElement('div');
+  panel.className = 'ntf-panel'; panel.hidden = true;
+  document.body.appendChild(panel);
+  let daftar = null, galat = '';
+  const kunci = x => x.jenis + '|' + x.teks;
+  let dibaca = [];
+  try { dibaca = JSON.parse(localStorage.getItem('ntfDibaca')) || []; } catch (e) {}
+
+  function gambar() {
+    const n = daftar ? daftar.length : 0;
+    if (!panel.hidden && daftar && !galat) {   // panel dibuka = semua dianggap sudah dibaca
+      dibaca = daftar.map(kunci);
+      try { localStorage.setItem('ntfDibaca', JSON.stringify(dibaca)); } catch (e) {}
+    }
+    const belum = daftar ? daftar.filter(x => dibaca.indexOf(kunci(x)) === -1).length : 0;
+    angkaEl.hidden = !belum; angkaEl.textContent = belum > 99 ? '99+' : belum;
+    let isi;
+    if (galat) isi = '<div class="ntf-kosong">' + esc(galat) + '</div>';
+    else if (!daftar) isi = '<div class="ntf-kosong">Memuat...</div>';
+    else if (!n) isi = '<div class="ntf-kosong">Tidak ada notifikasi.</div>';
+    else isi = daftar.map(x => '<button type="button" class="ntf-item" data-ke="' + esc(x.hal) + '"><i class="' + esc(x.warna) + '"></i><div><b>' + esc(x.jenis) + '</b><span>' + esc(x.teks) + '</span></div></button>').join('');
+    panel.innerHTML = '<b class="ntf-judul">Notifikasi</b>' + isi;
+  }
+
+  async function muat() {
+    try {
+      const r = await panggil('adminGetNotifikasi');
+      if (r && r.ok) { daftar = r.daftar; galat = ''; }
+      else galat = (r && r.pesan) || 'Gagal memuat notifikasi.';
+    } catch (e) { galat = 'Gagal memuat notifikasi.'; }
+    gambar();
+  }
+
+  function buka() {
+    panel.hidden = !panel.hidden;
+    if (panel.hidden) return;
+    const k = bel.getBoundingClientRect();
+    panel.style.top = (k.bottom + 8) + 'px';
+    panel.style.right = Math.max(12, document.documentElement.clientWidth - k.right) + 'px';
+    gambar(); muat();
+  }
+
+  bel.addEventListener('click', e => { e.stopPropagation(); buka(); });
+  bel.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(); } });
+  panel.addEventListener('click', e => {
+    e.stopPropagation();
+    const item = e.target.closest('[data-ke]');
+    if (item) { panel.hidden = true; Router.pindah(item.dataset.ke); }
+  });
+  document.addEventListener('click', () => { panel.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') panel.hidden = true; });
+
+  clearInterval(window.ntfTimer);
+  window.ntfTimer = setInterval(() => { if (document.body.contains(panel) && !document.hidden) muat(); }, 60000);
+  muat();
+})();
+</script>

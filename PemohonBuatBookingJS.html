@@ -1,0 +1,148 @@
+<script>
+var BB_IDS = ['tanggal', 'berangkat', 'tiba', 'tujuan', 'keperluan', 'penumpang'];
+var BB_MAKS_PENUMPANG = 20;
+
+function bbEl(id) { return document.getElementById(id); }
+function bbNilai(id) { return bbEl('bb_' + id).value.trim(); }
+
+var BB_MIN_HARI = 2;   // minimal H-2
+
+// Tanggal paling cepat yang boleh dipilih (waktu Jakarta), format yyyy-mm-dd
+function bbTglMin() {
+  return new Date(Date.now() + BB_MIN_HARI * 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+}
+
+function bbGalat(id, teks) {
+  bbEl('bbF_' + id).classList.toggle('bb-err', !!teks);
+  bbEl('bbE_' + id).textContent = teks || '';
+}
+
+function bbBanner(teks) {
+  var b = bbEl('bbBanner');
+  if (!b) return;
+  b.textContent = teks || '';
+  b.classList.toggle('on', !!teks);
+}
+
+// Mengembalikan pesan galat, atau '' bila isian valid
+function bbCek(id) {
+  var v = bbNilai(id);
+  if (id === 'tanggal') {
+    if (!v) return 'Tanggal berangkat wajib diisi.';
+    if (v < bbTglMin()) return 'Pengajuan minimal H-' + BB_MIN_HARI + ' sebelum keberangkatan.';
+    return '';
+  }
+  if (id === 'berangkat') return v ? '' : 'Jam berangkat wajib diisi.';
+  if (id === 'tiba') {
+    if (!v) return 'Estimasi jam tiba wajib diisi.';
+    var b = bbNilai('berangkat');
+    if (b && v <= b) return 'Estimasi jam tiba harus setelah jam berangkat';
+    return '';
+  }
+  if (id === 'tujuan') return v ? '' : 'Tujuan wajib diisi.';
+  if (id === 'keperluan') return v ? '' : 'Pilih keperluan.';
+  if (id === 'penumpang') {
+    if (!v) return 'Jumlah penumpang wajib diisi.';
+    var n = Number(v);
+    if (n % 1 !== 0 || n < 1 || n > BB_MAKS_PENUMPANG) return 'Jumlah penumpang 1 sampai ' + BB_MAKS_PENUMPANG + ' orang.';
+    return '';
+  }
+  return '';
+}
+
+function bbGayaPopup() {
+  if (document.getElementById('bbGayaPopup')) return;
+  var s = document.createElement('style');
+  s.id = 'bbGayaPopup';
+  s.textContent =
+    '.bb-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.5);backdrop-filter:blur(2px)}' +
+    '.bb-modal{width:min(420px,100%);background:#fff;border-radius:18px;padding:32px 28px 24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.3);animation:bbMuncul .2s ease}' +
+    '.bb-modal h3{margin:16px 0 8px;font-size:20px;color:#0f172a}' +
+    '.bb-modal p{margin:0 0 6px;color:#475569;font-size:14px;line-height:1.5}' +
+    '.bb-ceklis{width:64px;height:64px;border-radius:50%;background:#dcfce7;display:inline-flex;align-items:center;justify-content:center}' +
+    '.bb-lanjut{margin-top:22px;width:100%;border:0;border-radius:12px;padding:13px;background:#f9e326;color:#1e293b;font:inherit;font-weight:700;cursor:pointer}' +
+    '@keyframes bbMuncul{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}';
+  document.head.appendChild(s);
+}
+
+function bbPopupSukses(pesan) {
+  bbGayaPopup();
+  var lama = document.getElementById('bbSukses');
+  if (lama) lama.remove();
+  var o = document.createElement('div');
+  o.id = 'bbSukses';
+  o.className = 'bb-overlay';
+  o.innerHTML =
+    '<div class="bb-modal" role="dialog" aria-modal="true">' +
+      '<div class="bb-ceklis"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>' +
+      '<h3>Booking Berhasil Dikirim</h3>' +
+      '<p>' + (pesan || '') + '</p>' +
+      '<p>Admin akan memproses pengajuanmu dan menentukan mobil serta driver.</p>' +
+      '<button type="button" class="bb-lanjut" id="bbLanjut">Lihat Booking Saya</button>' +
+    '</div>';
+  document.body.appendChild(o);
+  var tombol = document.getElementById('bbLanjut');
+  tombol.focus();
+  tombol.addEventListener('click', function () {
+    o.remove();
+    loadView('PemohonBookingSaya');
+  });
+}
+
+function bbKirim() {
+  var pertama = null;
+  BB_IDS.forEach(function (id) {
+    var m = bbCek(id);
+    bbGalat(id, m);
+    if (m && !pertama) pertama = id;
+  });
+  bbBanner('');
+  if (pertama) { bbEl('bb_' + pertama).focus(); return; }
+
+  var btn = bbEl('bbKirim'), batal = bbEl('bbBatal');
+  var labelAsli = btn.innerHTML;
+  btn.disabled = true; batal.disabled = true;
+  btn.innerHTML = '<span class="bb-spin"></span> Mengirim...';
+
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (r && r.status === 'success') {
+        bbPopupSukses(r.message);   // pindah halaman dilakukan dari tombol di popup
+        return;
+      }
+      if (!bbEl('bbKirim')) return;
+      btn.disabled = false; batal.disabled = false; btn.innerHTML = labelAsli;
+      bbBanner((r && r.message) || 'Pengajuan gagal. Coba lagi.');
+    })
+    .withFailureHandler(function () {
+      if (!bbEl('bbKirim')) return;
+      btn.disabled = false; batal.disabled = false; btn.innerHTML = labelAsli;
+      bbBanner('Koneksi terputus. Periksa jaringan lalu coba lagi.');
+    })
+    .buatBooking(SID, bbNilai('tanggal'), bbNilai('berangkat'), bbNilai('tiba'),
+                 bbNilai('tujuan'), bbNilai('keperluan'), bbNilai('penumpang'));
+}
+
+// Dipanggil loadView() setelah HTML Buat Booking masuk
+function initBuatBooking() {
+  if (!bbEl('bbKirim')) return;
+  bbEl('bbBagian').textContent = USER.bagian || '-';
+  bbEl('bb_tanggal').min = bbTglMin();
+
+  BB_IDS.forEach(function (id) {
+    var el = bbEl('bb_' + id);
+    var ev = (el.tagName === 'SELECT' || el.type === 'date' || el.type === 'time') ? 'change' : 'input';
+    el.addEventListener(ev, function () {
+      bbGalat(id, bbCek(id));
+      if (id === 'berangkat' && bbNilai('tiba')) bbGalat('tiba', bbCek('tiba'));
+      bbBanner('');
+    });
+  });
+
+  bbEl('bbForm').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); bbKirim(); }
+  });
+  bbEl('bbKirim').addEventListener('click', bbKirim);
+  bbEl('bbBatal').addEventListener('click', function () { loadView('PemohonBeranda'); });
+}
+</script>

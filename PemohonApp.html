@@ -118,6 +118,8 @@
   .spinner-ring{width:100%;height:100%;border:4px solid rgba(0,162,233,.12);border-top:4px solid #00A2E9;border-right:4px solid #FFED00;border-radius:50%;animation:spinRing .8s linear infinite}
   .loading-text h3{font-size:15px;font-weight:700;color:#0F2C59;margin:0 0 3px 0;text-align:center}
   .loading-text p{font-size:12.5px;color:#64748B;margin:0;text-align:center;animation:pulseText 1.5s ease-in-out infinite}
+  /* ===== Spinner tombol logout ===== */
+  .btn-spin{display:inline-block;width:15px;height:15px;margin-right:8px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:spinRing .8s linear infinite;vertical-align:-2px}
   </style>
 </head>
 <body>
@@ -133,7 +135,7 @@
   <aside class="sb" id="sidebar">
     <div class="brand">
       <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#F7E52A"/><path d="M27 8 17 26h6l-3 12 11-18h-6z" fill="#E5252A"/><path d="M13 39c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0M13 43c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0" stroke="#1AA3D9" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
-      <div><b>PLNDinas</b><small>Peminjaman Mobil Dinas</small></div>
+      <div><b>BookTrip PLN</b><small>Peminjaman Mobil Dinas</small></div>
     </div>
     <nav class="nav">
       <a class="nav-item active" data-view="PemohonBeranda" href="#"><i class="fas fa-house"></i>Beranda</a>
@@ -277,6 +279,8 @@
           area.innerHTML = html;
           window.scrollTo(0, 0);
           if (namaHalaman === 'PemohonBeranda' && typeof initBerandaPemohon === 'function') initBerandaPemohon();
+          if (namaHalaman === 'PemohonBuatBooking' && typeof initBuatBooking === 'function') initBuatBooking();
+          if (namaHalaman === 'PemohonBookingSaya' && typeof initBookingSaya === 'function') initBookingSaya();
         })
         .withFailureHandler(function () {
           area.innerHTML = '<div class="err">Gagal memuat halaman. Periksa koneksi lalu muat ulang.</div>';
@@ -394,17 +398,33 @@
     $('logoutBatal').addEventListener('click', function () { $('modalLogout').classList.remove('on'); });
     $('modalLogout').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('on'); });
     $('logoutYa').addEventListener('click', function () {
-      this.disabled = true; this.textContent = 'Logout...';
-      var tombol = this;
+      var tombol = this, batal = $('logoutBatal');
+      tombol.disabled = true;
+      tombol.innerHTML = '<span class="btn-spin"></span>Logout...';
+      batal.style.display = 'none';   // sembunyikan Batal, tombol jadi lebar penuh seperti contohmu
+
+      // 1. hapus sesi di browser
+      try { sessionStorage.removeItem('sid'); } catch (e) {}
+
+      function gagal() {
+        tombol.disabled = false;
+        tombol.textContent = 'Ya, logout';
+        batal.style.display = '';
+        toast('Gagal keluar. Periksa koneksi lalu coba lagi.');
+      }
+
       function keluar() {
+        // 3. ganti alamat di address bar jadi ?page=login
+        try { google.script.history.replace(null, { page: 'login' }); } catch (e) {}
+
+        // 4. ganti isi halaman dengan login
         google.script.run
           .withSuccessHandler(function (html) { document.open(); document.write(html); document.close(); })
-          .withFailureHandler(function () {
-            tombol.disabled = false; tombol.textContent = 'Ya, logout';
-            if (typeof toast === 'function') toast('Gagal keluar. Periksa koneksi lalu coba lagi.');
-          })
+          .withFailureHandler(gagal)
           .bukaLogin();
       }
+
+      // 2. hapus sesi di server; berhasil atau gagal tetap lanjut keluar
       google.script.run.withSuccessHandler(keluar).withFailureHandler(keluar).logoutUser(SID);
     });
 
@@ -424,6 +444,8 @@
   </script>
 
   <?!= include('PemohonBerandaJS'); ?>
+  <?!= include('PemohonBuatBookingJS'); ?>
+  <?!= include('PemohonBookingSayaJS'); ?>
 
   <script>loadView('PemohonBeranda');</script>
 </body>
