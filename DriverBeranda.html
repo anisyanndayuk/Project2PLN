@@ -1,0 +1,109 @@
+<style>
+#h-beranda{display:grid;gap:18px}
+#h-beranda .info{margin:0}
+.banner{display:flex;gap:20px;justify-content:space-between;align-items:center;flex-wrap:wrap;color:#fff;border-radius:18px;padding:24px 28px;background:linear-gradient(120deg,var(--navy),#0B6A8F)}
+.banner h1{font-size:24px;font-weight:800;margin-bottom:6px}
+.banner p{opacity:.85;margin-top:8px}
+.pill-ghost{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:3px 12px;font-size:12px;font-weight:600;margin-left:6px;vertical-align:middle}
+.status-hari{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:14px 18px;min-width:290px}
+.status-hari small{opacity:.8;font-size:11px}
+.status-hari b{display:block;font-size:16px;margin:4px 0 10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips span{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.75)}
+.chips span.on{background:var(--kuning);color:var(--teks)}
+
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stat .kartu{display:grid;gap:6px;color:inherit;text-align:left;cursor:pointer;transition:border-color .2s}
+.stat .kartu:hover{border-color:var(--biru)}
+.stat .atas-k{display:flex;justify-content:space-between;align-items:center;color:var(--abu);font-size:12px;font-weight:700}
+.stat .ikon{width:34px;height:34px;border-radius:10px;background:var(--panel);color:var(--biru);display:grid;place-items:center}
+.angka{font-size:30px;font-weight:800;line-height:1.1}
+.angka small{font-size:13px;font-weight:600;color:var(--abu);margin-left:4px}
+.ket{font-size:12px;color:var(--abu)}
+.bintang span{color:#CBD5E1;font-size:18px}.bintang span.on{color:#F59E0B}
+.memuat .angka{color:#CBD5E1}
+
+.grid-b{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.tugas{border-left:6px solid var(--kuning);display:grid;gap:14px}
+.t-kepala{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tag{background:var(--kuning);font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px}
+.kode{color:var(--abu);font-weight:700}
+.tugas h2{font-size:22px;line-height:1.25}
+.waktu{display:flex;gap:14px;flex-wrap:wrap;color:var(--abu);font-size:13px}
+.waktu span{display:flex;gap:6px;align-items:center}
+.info-t{background:var(--panel);border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
+.info-t small{display:block;color:var(--abu);font-size:11px;font-weight:700;margin-bottom:2px}
+.info-t a{color:var(--biru);font-weight:600;text-decoration:none;display:inline-flex;gap:4px;align-items:center}
+.baris-mobil{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.jalan-info{display:flex;gap:24px;flex-wrap:wrap;background:#F0FDF4;border-radius:12px;padding:12px 16px}
+.jalan-info small{display:block;color:var(--abu);font-size:11px;font-weight:700}
+.jalan-info b{font-size:20px;font-variant-numeric:tabular-nums}
+.aksi{display:flex;gap:12px;flex-wrap:wrap}
+.aksi .btn.utama{flex:1;min-width:200px}
+.cat{font-size:12px;color:var(--abu)}
+
+.m-kepala{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.m-kepala b{display:flex;gap:8px;align-items:center}
+.m-list{display:grid;gap:10px}
+.m-item{text-align:left;background:#fff;border:1px solid var(--garis);border-radius:12px;padding:12px;display:grid;gap:4px;cursor:pointer;width:100%}
+.m-item:hover{border-color:var(--biru)}
+.m-tgl{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:var(--abu);font-weight:600}
+.m-item b{font-size:14px}
+.m-item p{font-size:12px;color:var(--abu)}
+.m-bawah{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:12px;color:var(--abu);margin-top:4px}
+.m-semua{width:100%;margin-top:12px}
+
+@media (max-width:1100px){.grid-b{grid-template-columns:1fr}}
+@media (max-width:700px){.stat{grid-template-columns:1fr}.info-t{grid-template-columns:1fr}.banner{padding:18px}.status-hari{min-width:0;width:100%}}
+</style>
+
+<div id="b-info" class="info" hidden>Akun ini belum terdaftar di sheet DRIVER, jadi data tugas belum bisa ditampilkan.</div>
+<div id="b-galat" class="info galat" hidden>
+  <span id="b-galat-teks"></span>
+  <a class="btn sekunder" id="b-masuk" target="_top" hidden>Masuk lagi</a>
+  <button class="btn sekunder" id="b-ulang" data-aksi="ulang">Coba lagi</button>
+</div>
+
+<section class="banner">
+  <div>
+    <h1><span id="b-halo">Halo</span><span class="pill-ghost" id="b-status-driver">Driver</span></h1>
+    <p>Semoga perjalanan dinas lancar dan aman.</p>
+  </div>
+  <div class="status-hari">
+    <small>Status hari ini</small>
+    <b id="b-status-teks">Memuat data...</b>
+    <div class="chips" id="b-chips">
+      <span data-k="ada">Ada tugas</span>
+      <span data-k="bertugas">Sedang bertugas</span>
+      <span data-k="kosong">Belum ada</span>
+    </div>
+  </div>
+</section>
+
+<section class="stat">
+  <button class="kartu" data-hal="riwayat">
+    <div class="atas-k">Total perjalanan <span class="ikon"><svg class="i"><use href="#arrow"/></svg></span></div>
+    <div class="angka"><span id="s-total">...</span><small>perjalanan selesai</small></div>
+    <div class="ket" id="s-total-ket">Seluruh perjalanan. Klik untuk filter bulan dan tahun.</div>
+  </button>
+  <button class="kartu" data-hal="riwayat">
+    <div class="atas-k">Total jarak tempuh <span class="ikon"><svg class="i"><use href="#gauge"/></svg></span></div>
+    <div class="angka"><span id="s-jarak">...</span><small>KM</small></div>
+    <div class="ket"><span id="s-rata">-</span> (dari catatan odometer)</div>
+  </button>
+  <button class="kartu" data-hal="rating">
+    <div class="atas-k">Rating <span class="ikon"><svg class="i"><use href="#star"/></svg></span></div>
+    <div class="angka"><span id="s-rating">...</span><small>/ 5.0</small></div>
+    <div class="bintang" id="s-bintang"></div>
+    <div class="ket" id="s-ulasan">-</div>
+  </button>
+</section>
+
+<div class="grid-b">
+  <article class="kartu tugas" id="b-tugas"></article>
+  <aside class="kartu">
+    <div class="m-kepala"><b><svg class="i"><use href="#calendar"/></svg>Tugas mendatang</b><span class="pill" id="m-jumlah">0 tugas</span></div>
+    <div class="m-list" id="m-list"></div>
+    <button class="btn sekunder m-semua" data-hal="tugas" id="m-semua">Lihat semua tugas</button>
+  </aside>
+</div>

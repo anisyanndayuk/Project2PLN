@@ -1,5 +1,5 @@
 // ==========================================
-// PLNDinas - BerandaPemohon.gs (Dashboard Pemohon: Beranda, Rating, Profil)
+// BookTrip PLN - Pemohon.gs (Dashboard Pemohon: Beranda, Rating, Profil)
 // Memakai fungsi bantu dari Kode.gs: bukaSheet_, bukaTabel_, getSesi, teks_, cariBaris_,
 // tulis_, hashPassword_, cekPassword_, DAFTAR_BAGIAN, SESI_DETIK.
 // ==========================================

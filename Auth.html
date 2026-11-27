@@ -298,6 +298,7 @@ $('loginForm').addEventListener('submit', function (e) {
   google.script.run
     .withSuccessHandler(function (r) {
       if (r.status === 'success') {
+        try { sessionStorage.setItem('sid', r.sid); } catch (e) {}
         btn.querySelector('.t').innerText = 'Berhasil, memuat dashboard...';
         google.script.run
           .withSuccessHandler(function (d) {
@@ -403,6 +404,25 @@ $('resetFormEl').addEventListener('submit', function (e) {
     .prosesResetPassword(RESET_TOKEN, pw);
 });
 
+// Pulihkan sesi setelah refresh: kalau sid masih valid, langsung buka dashboard
+function pulihkanSesi() {
+  var sid = null;
+  try { sid = sessionStorage.getItem('sid'); } catch (e) {}
+  if (!sid) return;
+  document.body.style.visibility = 'hidden';          // cegah form login berkedip
+  google.script.run
+    .withSuccessHandler(function (d) {
+      if (d && d.status === 'success') {
+        document.open(); document.write(d.html); document.close();
+      } else {                                         // sesi habis atau tidak valid
+        try { sessionStorage.removeItem('sid'); } catch (e) {}
+        document.body.style.visibility = '';
+      }
+    })
+    .withFailureHandler(function () { document.body.style.visibility = ''; })
+    .bukaDashboard(sid);
+}
+
 // ---------- Tampilan awal ----------
 (function init() {
   const awal = "<?!= initialView ?>";
@@ -420,6 +440,7 @@ $('resetFormEl').addEventListener('submit', function (e) {
   }
   aturPeran();
   pindahHalaman(awal);
+  if (awal === 'view-login') pulihkanSesi();
 })();
 </script>
 </body>
