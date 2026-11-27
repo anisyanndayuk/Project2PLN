@@ -1,0 +1,144 @@
+<style>
+/* Butuh variabel :root dan class .btn-y / .btn-o dari PemohonApp.html. Semua class di sini berawalan bb- */
+.bb-crumb{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.bb-crumb b{color:var(--ink)}
+.bb-crumb i{margin:0 6px;font-size:8px}
+.bb-title{font-size:22px;font-weight:800;letter-spacing:-.3px;margin-top:8px}
+.bb-sub{font-size:13px;color:var(--mut);margin:4px 0 18px}
+
+.bb-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px}
+.bb-ch{display:flex;align-items:center;gap:12px;padding:16px 22px}
+.bb-ci{width:34px;height:34px;border-radius:10px;background:#E0ECFB;color:#2B6CB0;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.bb-ch h2{font-size:15px;font-weight:800;line-height:1.2}
+.bb-ch p{font-size:12px;color:var(--mut)}
+
+/* Ketentuan */
+.bb-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 22px}
+.bb-rule{display:flex;align-items:center;gap:12px;background:#F3F6FC;border-radius:10px;padding:12px 14px;font-size:12.5px;font-weight:500;line-height:1.4}
+.bb-num{width:22px;height:22px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bb-stat{display:flex;align-items:center;gap:12px;margin:12px 22px 20px;padding:12px 14px;border-radius:10px;background:#FEF9C3;font-size:12.5px;font-weight:500}
+.bb-stat i{color:#B7791F}
+.bb-chip{padding:3px 12px;border-radius:99px;background:var(--y);font-size:11px;font-weight:700}
+
+/* Form */
+.bb-form{border-top:1px solid var(--line);padding:20px 22px 22px}
+.bb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
+.bb-lb{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.bb-lh{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--mut)}
+.bb-lb em{color:var(--red);font-style:normal}
+.bb-in{position:relative}
+.bb-in .bb-ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#6B7280;font-size:13px;pointer-events:none}
+.bb-in input,.bb-in select{width:100%;height:42px;padding:0 14px 0 38px;border:1px solid transparent;background:#F3F6FC;border-radius:8px;font-size:13px;color:var(--ink)}
+.bb-in select{appearance:none;-webkit-appearance:none;padding-right:36px}
+.bb-in .bb-chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:10px;color:#6B7280;pointer-events:none}
+.bb-in input[type=number]{appearance:textfield;-moz-appearance:textfield;padding-right:64px}
+.bb-in input[type=number]::-webkit-outer-spin-button,.bb-in input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bb-in.bb-t input{padding-right:12px}
+.bb-tag{position:absolute;right:44px;top:50%;transform:translateY(-50%);padding:2px 7px;border-radius:5px;background:#E0ECFB;color:#1D4ED8;font-size:9.5px;font-weight:800;pointer-events:none}
+.bb-unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--mut);pointer-events:none}
+.bb-in input:focus,.bb-in select:focus{outline:0;border-color:var(--b);background:#fff}
+.bb-f.bb-err .bb-in input,.bb-f.bb-err .bb-in select{border-color:var(--red);background:#fff}
+.bb-em{display:block;margin-top:5px;font-size:11.5px;color:var(--red)}
+.bb-em:empty{display:none}
+.bb-hint{display:block;margin-top:5px;font-size:11px;color:var(--mut)}
+
+.bb-info{display:flex;align-items:center;gap:8px;margin-top:20px;padding:11px 14px;border:1px solid var(--line);background:#F9FAFB;border-radius:8px;font-size:12px;color:#4B5563}
+.bb-info i{color:var(--b)}
+.bb-bn{display:none;margin-top:16px;padding:10px 14px;border-radius:8px;background:#FEE2E2;color:#B91C1C;font-size:12.5px;line-height:1.5}
+.bb-bn.on{display:block}
+.bb-act{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.bb-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(17,24,39,.25);border-top-color:var(--ink);border-radius:50%;animation:spinRing .8s linear infinite}
+
+@media(max-width:900px){.bb-rules{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .bb-grid{grid-template-columns:1fr}
+  .bb-act button{flex:1}
+}
+</style>
+
+<div class="bb-wrap" id="bbForm">
+  <div class="bb-crumb">Portal Pemohon <i class="fas fa-chevron-right"></i> <b>Booking Baru</b></div>
+  <h1 class="bb-title">Form Pengajuan Booking Kendaraan</h1>
+  <p class="bb-sub">Lengkapi detail rencana kegiatan dan perjalanan dinas Anda untuk diproses oleh Admin.</p>
+
+  <section class="bb-card">
+    <div class="bb-ch">
+      <div class="bb-ci"><i class="fas fa-shield-halved"></i></div>
+      <div><h2>Ketentuan Singkat</h2><p>Pedoman operasional peminjaman armada</p></div>
+    </div>
+    <div class="bb-rules">
+      <div class="bb-rule"><span class="bb-num">1</span>Ajukan minimal H-2 sebelum keberangkatan</div>
+      <div class="bb-rule"><span class="bb-num">2</span>Mobil dan driver ditentukan admin setelah disetujui</div>
+      <div class="bb-rule"><span class="bb-num">3</span>Pantau status di Booking Saya</div>
+    </div>
+    <div class="bb-stat"><i class="fas fa-hourglass-half"></i><span>Setelah diajukan, status booking:</span><span class="bb-chip">Diajukan</span></div>
+  </section>
+
+  <section class="bb-card">
+    <div class="bb-ch">
+      <div class="bb-ci"><i class="fas fa-car-side"></i></div>
+      <div><h2>Form Pengajuan</h2><p>Isi data perjalanan dengan lengkap</p></div>
+    </div>
+
+    <div class="bb-form">
+      <div class="bb-grid">
+        <div class="bb-f" id="bbF_tanggal">
+          <label class="bb-lb" for="bb_tanggal"><span>Tanggal berangkat <em>*</em></span><span class="bb-lh">Paling cepat lusa (H-2)</span></label>
+          <div class="bb-in"><i class="far fa-calendar bb-ic"></i><input id="bb_tanggal" type="date"></div>
+          <span class="bb-em" id="bbE_tanggal"></span>
+        </div>
+
+        <div class="bb-f" id="bbF_berangkat">
+          <label class="bb-lb" for="bb_berangkat">Jam berangkat <em>*</em></label>
+          <div class="bb-in bb-t"><i class="far fa-clock bb-ic"></i><input id="bb_berangkat" type="time"><span class="bb-tag">WIB</span></div>
+          <span class="bb-em" id="bbE_berangkat"></span>
+        </div>
+
+        <div class="bb-f" id="bbF_tiba">
+          <label class="bb-lb" for="bb_tiba">Estimasi jam tiba <em>*</em></label>
+          <div class="bb-in bb-t"><i class="far fa-clock bb-ic"></i><input id="bb_tiba" type="time"><span class="bb-tag">WIB</span></div>
+          <span class="bb-em" id="bbE_tiba"></span>
+        </div>
+
+        <div class="bb-f" id="bbF_tujuan">
+          <label class="bb-lb" for="bb_tujuan">Tujuan <em>*</em></label>
+          <div class="bb-in"><i class="fas fa-location-dot bb-ic"></i><input id="bb_tujuan" type="text" maxlength="150" autocomplete="off" placeholder="Contoh: Kantor PLN UID Jawa Timur, Surabaya"></div>
+          <span class="bb-em" id="bbE_tujuan"></span>
+        </div>
+
+        <div class="bb-f" id="bbF_keperluan">
+          <label class="bb-lb" for="bb_keperluan">Keperluan <em>*</em></label>
+          <div class="bb-in">
+            <i class="far fa-clipboard bb-ic"></i>
+            <select id="bb_keperluan">
+              <option value="">Pilih keperluan</option>
+              <option>Dinas</option>
+              <option>Rapat / Koordinasi</option>
+              <option>Survei Lapangan</option>
+              <option>Pelatihan</option>
+              <option>Pemeliharaan Jaringan</option>
+              <option>Lainnya</option>
+            </select>
+            <i class="fas fa-chevron-down bb-chev"></i>
+          </div>
+          <span class="bb-em" id="bbE_keperluan"></span>
+        </div>
+
+        <div class="bb-f" id="bbF_penumpang">
+          <label class="bb-lb" for="bb_penumpang">Jumlah penumpang <em>*</em></label>
+          <div class="bb-in"><i class="fas fa-users bb-ic"></i><input id="bb_penumpang" type="number" min="1" max="20" step="1" placeholder="1"><span class="bb-unit">Orang</span></div>
+          <span class="bb-em" id="bbE_penumpang"></span>
+        </div>
+      </div>
+
+      <div class="bb-info"><i class="far fa-building"></i><span>Bagian: <b id="bbBagian">-</b> (otomatis dari akun Anda)</span></div>
+
+      <div class="bb-bn" id="bbBanner" role="alert"></div>
+
+      <div class="bb-act">
+        <button type="button" class="btn-o" id="bbBatal">Batal</button>
+        <button type="button" class="btn-y" id="bbKirim"><i class="far fa-paper-plane"></i> Ajukan Booking</button>
+      </div>
+    </div>
+  </section>
+</div>

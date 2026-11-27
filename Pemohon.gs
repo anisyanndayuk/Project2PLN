@@ -5,13 +5,17 @@
 // ==========================================
 // Header sheet lain (sesuai DB_PINJAM_MOBIL). Kolom yang belum ada ditambahkan otomatis di kanan.
 const KOLOM_BOOKING = ['ID_BOOKING', 'WAKTU_PENGAJUAN', 'ID_PEMOHON', 'BAGIAN', 'WAKTU_BERANGKAT', 'WAKTU_TIBA_ESTIMASI',
-  'TUJUAN', 'KEPERLUAN', 'JUMLAH_PENUMPANG', 'STATUS', 'ID_MOBIL', 'ID_DRIVER', 'ID_ADMIN', 'WAKTU_KEPUTUSAN', 'ALASAN_TOLAK'];
+  'TUJUAN', 'KEPERLUAN', 'JUMLAH_PENUMPANG', 'STATUS', 'ID_MOBIL', 'ID_DRIVER', 'ID_ADMIN', 'WAKTU_KEPUTUSAN', 'ALASAN_TOLAK', 'ALASAN_BATAL'];
 const KOLOM_MOBIL = ['ID_MOBIL', 'PLAT', 'JENIS', 'KAPASITAS', 'ASAL', 'ID_DRIVER_TETAP', 'STATUS', 'KETERANGAN', 'KM_TERAKHIR'];
 const KOLOM_DRIVER = ['ID_DRIVER', 'ID_PENGGUNA', 'STATUS_DRIVER', 'JENIS_SIM', 'MASA_BERLAKU_SIM', 'PENGALAMAN_TAHUN',
   'RUTE_DIKUASAI', 'SERTIFIKASI', 'AKTIF'];
 const KOLOM_RATING = ['ID_RATING', 'ID_BOOKING', 'ID_DRIVER', 'ID_PEMOHON', 'TANGGAL', 'NILAI', 'KOMENTAR'];
 const TZ = 'Asia/Jakarta';
 const STATUS_AKTIF = ['Diajukan', 'Disetujui', 'Berjalan'];
+const STATUS_BARU = 'Diajukan';             
+const STATUS_BISA_BATAL = ['Diajukan'];     
+const MAKS_PENUMPANG = 6;
+const MIN_HARI_BOOKING = 2;   // minimal H-2
 
 
 // ==========================================
@@ -39,6 +43,11 @@ function waktuBagian_(v) {
   return { tgl: '', jam: '' };
 }
 
+function fmtWaktu_(v) {
+  var w = waktuBagian_(v);
+  return w.tgl ? w.tgl + (w.jam ? ' ' + w.jam : '') : '';
+}
+
 function ringkasBooking_(r, bk, mobil, driver) {
   var m = mobil[teks_(r[bk.h.ID_MOBIL])], d = driver[teks_(r[bk.h.ID_DRIVER])];
   var brk = waktuBagian_(r[bk.h.WAKTU_BERANGKAT]), tiba = waktuBagian_(r[bk.h.WAKTU_TIBA_ESTIMASI]);
@@ -51,6 +60,12 @@ function ringkasBooking_(r, bk, mobil, driver) {
     keperluan: teks_(r[bk.h.KEPERLUAN]),
     status: teks_(r[bk.h.STATUS]) || 'Diajukan',
     idDriver: teks_(r[bk.h.ID_DRIVER]),
+    penumpang: Number(r[bk.h.JUMLAH_PENUMPANG]) || 0,
+    bagian: teks_(r[bk.h.BAGIAN]),
+    waktuPengajuan: fmtWaktu_(r[bk.h.WAKTU_PENGAJUAN]),
+    waktuKeputusan: fmtWaktu_(r[bk.h.WAKTU_KEPUTUSAN]),
+    alasanTolak: teks_(r[bk.h.ALASAN_TOLAK]),
+    alasanBatal: teks_(r[bk.h.ALASAN_BATAL]),
     mobil: m || null,
     driver: d || null
   };
@@ -203,5 +218,87 @@ function ubahPassword(sid, lama, baru) {
     return { status: 'success', message: 'Password berhasil diubah.' };
   } catch (err) {
     return { status: 'error', message: 'Gagal mengubah password: ' + err.message };
+  }
+}
+
+
+// ==========================================
+// BUAT BOOKING
+// ==========================================
+function buatBooking(sid, tanggal, jamBerangkat, jamTiba, tujuan, keperluan, jumlah) {
+  var lock = LockService.getScriptLock();
+  try {
+    var u = sesiPemohon_(sid);
+    if (!u) return { status: 'error', message: 'Sesi berakhir. Silakan masuk lagi.' };
+
+    tanggal = teks_(tanggal); jamBerangkat = teks_(jamBerangkat); jamTiba = teks_(jamTiba);
+    tujuan = teks_(tujuan); keperluan = teks_(keperluan); jumlah = Number(jumlah);
+
+    if (!tanggal || !jamBerangkat || !jamTiba || !tujuan || !keperluan) return { status: 'error', message: 'Semua kolom wajib diisi.' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || !/^\d{2}:\d{2}$/.test(jamBerangkat) || !/^\d{2}:\d{2}$/.test(jamTiba)) {
+      return { status: 'error', message: 'Format tanggal atau jam tidak valid.' };
+    }
+    var berangkat = Utilities.parseDate(tanggal + ' ' + jamBerangkat, TZ, 'yyyy-MM-dd HH:mm');
+    var tiba = Utilities.parseDate(tanggal + ' ' + jamTiba, TZ, 'yyyy-MM-dd HH:mm');
+    if (Utilities.formatDate(berangkat, TZ, 'yyyy-MM-dd') !== tanggal) return { status: 'error', message: 'Tanggal tidak valid.' };
+
+    var tglMin = Utilities.formatDate(new Date(Date.now() + MIN_HARI_BOOKING * 86400000), TZ, 'yyyy-MM-dd');
+    if (tanggal < tglMin) return { status: 'error', message: 'Pengajuan minimal H-' + MIN_HARI_BOOKING + ' sebelum keberangkatan.' };
+    if (tiba <= berangkat) return { status: 'error', message: 'Estimasi jam tiba harus setelah jam berangkat.' };
+    if (tujuan.length > 150 || keperluan.length > 100) return { status: 'error', message: 'Tujuan atau keperluan terlalu panjang.' };
+    if (!(jumlah >= 1 && jumlah <= MAKS_PENUMPANG) || jumlah % 1 !== 0) {
+      return { status: 'error', message: 'Jumlah penumpang 1 sampai ' + MAKS_PENUMPANG + ' orang.' };
+    }
+
+    lock.waitLock(15000);
+    var bk = bukaSheet_('BOOKING', KOLOM_BOOKING);
+    var maks = 0;
+    bk.data.forEach(function (r) {
+      var n = parseInt(teks_(r[bk.h.ID_BOOKING]).replace(/\D/g, ''), 10);
+      if (!isNaN(n) && n > maks) maks = n;
+    });
+    var id = 'BKG' + ('000' + (maks + 1)).slice(-3);
+
+    var row = new Array(bk.lebar).fill('');
+    row[bk.h.ID_BOOKING] = id;
+    row[bk.h.WAKTU_PENGAJUAN] = new Date();
+    row[bk.h.ID_PEMOHON] = u.id;
+    row[bk.h.BAGIAN] = u.bagian;
+    row[bk.h.WAKTU_BERANGKAT] = berangkat;
+    row[bk.h.WAKTU_TIBA_ESTIMASI] = tiba;
+    row[bk.h.TUJUAN] = tujuan;
+    row[bk.h.KEPERLUAN] = keperluan;
+    row[bk.h.JUMLAH_PENUMPANG] = jumlah;
+    row[bk.h.STATUS] = STATUS_BARU;
+    bk.sheet.appendRow(row);
+    return { status: 'success', message: 'Booking ' + id + ' berhasil diajukan.', id: id };
+  } catch (err) {
+    return { status: 'error', message: 'Gagal mengajukan booking: ' + err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (x) {}
+  }
+}
+
+// Pemohon hanya boleh membatalkan sebelum booking disetujui (untuk halaman Booking Saya nanti)
+function batalkanBooking(sid, idBooking, alasan) {
+  var lock = LockService.getScriptLock();
+  try {
+    var u = sesiPemohon_(sid);
+    if (!u) return { status: 'error', message: 'Sesi berakhir. Silakan masuk lagi.' };
+    lock.waitLock(15000);
+    var bk = bukaSheet_('BOOKING', KOLOM_BOOKING);
+    var i = cariBaris_(bk, 'ID_BOOKING', idBooking);
+    if (i === -1 || teks_(bk.data[i][bk.h.ID_PEMOHON]) !== u.id) return { status: 'error', message: 'Booking tidak ditemukan.' };
+    var st = teks_(bk.data[i][bk.h.STATUS]) || STATUS_BARU;
+    if (STATUS_BISA_BATAL.indexOf(st) === -1) {
+      return { status: 'error', message: 'Booking dengan status ' + st + ' tidak bisa dibatalkan.' };
+    }
+    tulis_(bk, i, 'STATUS', 'Dibatalkan');
+    tulis_(bk, i, 'ALASAN_BATAL', teks_(alasan).slice(0, 300));
+    return { status: 'success', message: 'Booking dibatalkan.' };
+  } catch (err) {
+    return { status: 'error', message: 'Gagal membatalkan: ' + err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (x) {}
   }
 }
