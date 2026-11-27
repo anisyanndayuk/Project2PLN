@@ -1,0 +1,346 @@
+<script>
+(function () {
+  const R = $('#h-beranda'), q = s => $(s, R);
+  let terakhir, tabel = [], filterAktif = 'semua', modalAktif = '', pending = [], presel = null, opsi = null, mobilItems = [], dlgSelesai = null;
+
+  const km = v => {
+    const n = Number(String(v == null ? '' : v).replace(/[^0-9.]/g, ''));
+    return (v === '' || v == null || isNaN(n)) ? '-' : n.toLocaleString('id-ID') + ' KM';
+  };
+
+  // Panggil fungsi server. Balasan { ok:false } dijadikan Error (e.kode = SESI / AKSES / GALAT)
+  async function kirim(fn) {
+    const r = await panggil.apply(null, arguments);
+    if (r && r.ok === false) { const e = new Error(r.pesan || 'Terjadi kesalahan.'); e.kode = r.kode; throw e; }
+    return r;
+  }
+
+  // ---------------- Dashboard ----------------
+function render(d) {
+  if (!d.ok) return galat(d.pesan, d.kode);
+  terakhir = d;
+  R.classList.remove('memuat');
+  q('#b-galat').hidden = true;
+  Shell.isiHeader(d.pengguna);
+
+  const s = d.stats;
+  tabel = d.pengajuan || [];
+
+  q('#s-menunggu').textContent = angka(s.menunggu);
+  q('#tag-menunggu').textContent = angka(s.menungguMendesak) + ' Perlu Segera';
+  q('#s-jalan').textContent = angka(s.sedangJalan);
+  q('#tag-jalan').textContent = angka(s.sedangJalan) + ' Operasional Aktif';
+  q('#s-tersedia').textContent = angka(s.tersedia);
+  q('#tag-tersedia').textContent = angka(s.tersedia) + ' Siap Ditugaskan';
+  q('#t-badge').textContent = s.menunggu + ' Menunggu Konfirmasi';
+  renderTabel();
+}
+
+function galat(pesan, kode) {
+  R.classList.remove('memuat');
+  const sesi = kode === 'SESI';
+  q('#b-masuk').hidden = !sesi; q('#b-ulang').hidden = sesi;
+  if (sesi) q('#b-masuk').href = BASE_URL + '?page=login';
+  q('#b-galat-teks').textContent = pesan || 'Tidak dapat terhubung ke server.';
+  q('#b-galat').hidden = false;
+  if (!terakhir) {
+    q('#t-body').innerHTML = '<tr class="tb-kosong"><td colspan="6">Data belum dapat dimuat. Periksa koneksi, lalu coba lagi.</td></tr>';
+  }
+}
+
+  async function muat(paksa) {
+    if (paksa) delete App.cache.beranda;
+    if (!terakhir) R.classList.add('memuat');
+    try { await ambil('beranda', 'adminBeranda', 45000, render); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  function renderTabel() {
+  const hariIni = tabel.filter(p => p.hariIni).length;
+  const mendesak = tabel.filter(p => p.mendesak).length;
+  const tab = R.querySelectorAll('#t-tabs .tab');
+  tab[0].firstChild.textContent = 'Semua (' + tabel.length + ')';
+  tab[1].firstChild.textContent = 'Hari Ini (' + hariIni + ')';
+  tab[2].firstChild.textContent = 'Mendesak (' + mendesak + ')';
+  tab[2].querySelector('.titik').hidden = !mendesak;
+
+    const list = tabel.filter(p => filterAktif === 'hariini' ? p.hariIni : filterAktif === 'mendesak' ? p.mendesak : true);
+    q('#t-body').innerHTML = list.length ? list.map(p => {
+      const aksi = p.bisaDiproses
+        ? '<button class="btn utama kecil" data-aksi="proses" data-id="' + esc(p.id) + '">' + ikon('user') + 'Proses</button>' +
+          '<button class="btn tolak kecil" data-aksi="tolak" data-id="' + esc(p.id) + '">Tolak</button>'
+        : '<span class="cat">Sudah diproses</span>';
+      return '<tr class="' + (p.mendesak ? 'mendesak' : '') + '">' +
+        '<td class="nama"><b>' + esc(p.nama) + '</b>' + (p.hp ? '<small>' + esc(p.hp) + '</small>' : '') +
+          '<span class="pill ' + (p.status === 'Disetujui' ? '' : 'tunggu') + '">' + esc(p.status) + '</span></td>' +
+        '<td>' + esc(p.bagian) + '</td>' +
+        '<td class="tujuan"><b>' + esc(p.tujuan) + '</b><small>' + esc(p.keperluan) + '</small></td>' +
+        '<td><span class="tgl ' + (p.mendesak ? 'merah' : p.hariIni ? '' : 'biru') + '">' + esc(p.tanggal) + '</span>' + esc(p.jam) + '</td>' +
+        '<td class="tengah"><span class="pill">' + esc(p.penumpang) + ' Orang</span></td>' +
+        '<td><div class="aksi">' + aksi + '</div></td></tr>';
+    }).join('') : '<tr class="tb-kosong"><td colspan="6">Tidak ada pengajuan.</td></tr>';
+    q('#t-info').textContent = 'Menampilkan ' + list.length + ' permohonan antrean';
+  }
+
+  // ---------------- Pop-up besar ----------------
+  function popup(html) { q('#p-kotak').innerHTML = html; q('#p-overlay').classList.add('show'); }
+  function tutup() { q('#p-overlay').classList.remove('show'); modalAktif = ''; presel = null; }
+  function memuatHtml() { return '<div class="da-memuat"><div class="da-spin"></div>Memuat data...</div>'; }
+  function gagalMuat(e) { tutup(); galat(e && e.message, e && e.kode); }
+
+  // c: { ikon, warna, judul, sub, badge, badgeCls, tab, tabIkon, galat, body, foot }
+  function shell(c) {
+    return '<div class="da-mh"><div class="da-mic ' + c.warna + '">' + ikon(c.ikon) + '</div>' +
+      '<div class="da-mt"><h3>' + esc(c.judul) + (c.badge ? '<span class="pill ' + (c.badgeCls || '') + '">' + esc(c.badge) + '</span>' : '') + '</h3><p>' + esc(c.sub) + '</p></div>' +
+      '<button class="da-x" data-aksi="tutup" aria-label="Tutup">' + ikon('close') + '</button></div>' +
+      (c.tab ? '<div class="da-tabbar"><span class="da-tab">' + ikon(c.tabIkon) + esc(c.tab) + '</span></div>' : '') +
+      '<div class="da-mb">' + (c.galat ? '<div class="info galat">' + esc(c.galat) + '</div>' : '') + c.body + '</div>' +
+      (c.foot ? '<div class="da-mf">' + c.foot + '</div>' : '');
+  }
+  const FOOT_TUTUP = '<span class="da-fnote">Tekan Tutup atau klik area luar untuk kembali ke dashboard</span>' +
+    '<button class="btn sekunder kecil" data-aksi="tutup">Tutup</button>';
+  const PEND = { ikon: 'inbox', warna: 'ic-kuning', judul: 'Pengajuan Menunggu Persetujuan', sub: 'Sistem Monitoring Status Armada & Penugasan Driver PLN UP3 Malang', tabIkon: 'inbox' };
+
+  // ---------------- Dialog konfirmasi (gaya .modal global) ----------------
+  // o: { judul, html, input (label kolom alasan), labelYa, labelBatal (kosong = tanpa tombol batal), bahaya }
+  // Hasil Promise: false (batal / Esc / klik luar), true, atau teks isian bila ada kolom alasan.
+  function dialog(o) {
+    return new Promise(selesai => {
+      const m = q('#m-aksi'), ya = q('#m-ya'), batal = q('#m-batal'), ta = q('#m-input');
+      q('#m-judul').textContent = o.judul;
+      q('#m-isi').innerHTML = o.html || '';
+      q('#m-input-wrap').hidden = !o.input;
+      if (o.input) { q('#m-input-lbl').textContent = o.input; ta.value = ''; }
+      q('#m-err').textContent = '';
+      ya.textContent = o.labelYa || 'OK'; ya.className = 'btn ' + (o.bahaya ? 'bahaya' : 'utama');
+      batal.textContent = o.labelBatal || 'Batal'; batal.hidden = !o.labelBatal;
+      const tutupDlg = h => { dlgSelesai = null; m.hidden = true; selesai(h); };
+      dlgSelesai = () => tutupDlg(false);
+      ya.onclick = () => {
+        if (!o.input) return tutupDlg(true);
+        const v = ta.value.trim();
+        if (v.length < 5) { q('#m-err').textContent = 'Alasan wajib diisi (minimal 5 karakter).'; return; }
+        tutupDlg(v);
+      };
+      batal.onclick = () => tutupDlg(false);
+      m.onclick = e => { if (e.target === m) tutupDlg(false); };
+      m.hidden = false; (o.input ? ta : ya).focus();
+    });
+  }
+  const rinci = baris => '<div class="rinci">' + baris.map(b => '<div><span>' + esc(b[0]) + '</span><b>' + esc(b[1]) + '</b></div>').join('') + '</div>';
+
+  // ---------------- Pengajuan menunggu ----------------
+  async function bukaPengajuan() {
+    modalAktif = 'pending';
+    popup(shell({ ikon: PEND.ikon, warna: PEND.warna, judul: PEND.judul, sub: PEND.sub, tab: 'Pengajuan Menunggu', tabIkon: PEND.tabIkon, body: memuatHtml(), foot: FOOT_TUTUP }));
+    try { pending = (await kirim('adminGetPengajuanMenunggu')).daftar || []; renderPengajuan(); }
+    catch (e) { gagalMuat(e); }
+  }
+
+  function renderPengajuan() {
+    const banner = presel
+      ? '<div class="da-banner">' + ikon('car') + '<span>Unit terpilih: <b>' + esc(presel.nama) + ' (' + esc(presel.plat) + ')</b>. Pilih pengajuan yang akan memakai unit ini.</span>' +
+        '<button data-aksi="batal-presel">Batalkan pilihan</button></div>' : '';
+    const kartu = pending.length ? pending.map(p =>
+      '<div class="da-item"><div class="da-item-main">' +
+        '<div class="da-item-top"><span class="da-idchip">' + esc(p.id) + '</span><b>' + esc(p.nama) + '</b><span class="da-bag">' + esc(p.bagian) + '</span>' + (p.mendesak ? '<span class="pill merah">Mendesak</span>' : '') + '</div>' +
+        '<div class="da-item-meta"><span>' + ikon('pin') + '<b>' + esc(p.tujuan) + '</b> <span class="mut">(' + esc(p.keperluan) + ')</span></span><span class="sep"></span>' +
+          '<span>' + ikon('clock') + esc(p.rentang) + '</span><span class="sep"></span><span>' + esc(p.penumpang) + ' Penumpang</span></div></div>' +
+      '<div class="da-item-act"><button class="btn utama kecil" data-aksi="proses" data-id="' + esc(p.id) + '">' + ikon('user') + 'Alokasikan Mobil</button>' +
+        '<button class="btn tolak kecil" data-aksi="tolak" data-id="' + esc(p.id) + '">Tolak</button></div></div>'
+    ).join('') : '<div class="da-kosong">Tidak ada pengajuan yang menunggu persetujuan.</div>';
+    popup(shell({ ikon: PEND.ikon, warna: PEND.warna, judul: PEND.judul, badge: pending.length + ' Antrean', badgeCls: 'merah', sub: PEND.sub,
+                  tab: 'Pengajuan Menunggu (' + pending.length + ')', tabIkon: PEND.tabIkon, body: banner + kartu, foot: FOOT_TUTUP }));
+  }
+
+  // ---------------- Alokasi mobil & driver ----------------
+  async function bukaAssign(id, pesanGalat) {
+    modalAktif = 'assign';
+    popup(shell({ ikon: PEND.ikon, warna: PEND.warna, judul: PEND.judul, sub: PEND.sub, body: memuatHtml() }));
+    try { opsi = await kirim('adminGetOpsiPenugasan', id); renderAssign(pesanGalat); }
+    catch (e) { gagalMuat(e); muat(true); }
+  }
+
+  function renderAssign(pesanGalat) {
+    const b = opsi.booking;
+    const optM = opsi.mobil.length ? opsi.mobil.map(m => '<option value="' + esc(m.id) + '">' + esc(m.label) + '</option>').join('') : '<option value="">Tidak ada mobil tersedia pada jadwal ini</option>';
+    const optD = opsi.driver.length ? opsi.driver.map(r => '<option value="' + esc(r.id) + '">' + esc(r.label) + '</option>').join('') : '<option value="">Tidak ada driver tersedia pada jadwal ini</option>';
+    const body = '<div class="da-sum"><div class="r1"><b>' + esc(b.nama) + '</b><span>' + esc(b.bagian) + '</span></div>' +
+      '<div class="r2">' + ikon('pin') + esc(b.tujuan) + ' (' + esc(b.keperluan) + ')</div>' +
+      '<div class="r3"><span>' + esc(b.tanggal) + ' &bull; ' + esc(b.jam) + '</span><b>' + esc(b.penumpang) + ' Pax</b></div></div>' +
+      '<label class="lbl" for="sel-mobil">Pilih Mobil</label><div class="pilih"><select id="sel-mobil">' + optM + '</select>' + ikon('chevron') + '</div>' +
+      '<label class="lbl" for="sel-driver">Pilih Driver</label><div class="pilih"><select id="sel-driver">' + optD + '</select>' + ikon('chevron') + '</div>' +
+      '<button class="btn utama penuh" id="btn-setuju" data-aksi="setuju"' + (opsi.mobil.length && opsi.driver.length ? '' : ' disabled') + '>' + ikon('check') + 'Setujui dan Tugaskan</button>';
+    popup(shell({ ikon: PEND.ikon, warna: PEND.warna, judul: PEND.judul, badge: pending.length ? pending.length + ' Antrean' : '', badgeCls: 'merah', sub: PEND.sub, galat: pesanGalat, body: body }));
+    if (presel) {
+      const sel = q('#sel-mobil'), ada = Array.prototype.some.call(sel.options, (o, i) => o.value === presel.id && (sel.selectedIndex = i, true));
+      if (!ada) toast('Unit ' + presel.plat + ' tidak tersedia pada jadwal pengajuan ini.');
+    }
+    gantiMobil();
+  }
+
+  // Driver tetap unit otomatis terpilih
+  function gantiMobil() {
+    const m = (opsi && opsi.mobil || []).filter(x => x.id === q('#sel-mobil').value)[0];
+    if (!m || !m.driverTetap) return;
+    const sd = q('#sel-driver');
+    for (let i = 0; i < sd.options.length; i++) if (sd.options[i].value === m.driverTetap) { sd.selectedIndex = i; return; }
+  }
+
+  async function setujui() {
+    const b = opsi.booking, sm = q('#sel-mobil'), sd = q('#sel-driver');
+    if (!sm.value || !sd.value) { toast('Pilih mobil dan driver terlebih dahulu.'); return; }
+    const ya = await dialog({ judul: 'Setujui dan tugaskan?', labelYa: 'Ya, setujui', labelBatal: 'Periksa lagi',
+      html: rinci([['Pemohon', b.nama], ['Tujuan', b.tujuan], ['Jadwal', b.rentang], ['Mobil', sm.options[sm.selectedIndex].text], ['Driver', sd.options[sd.selectedIndex].text]]) });
+    if (!ya) return;
+    const tombol = q('#btn-setuju'); tombol.disabled = true; tombol.textContent = 'Menyimpan...';
+    try {
+      const r = await kirim('adminSetujuiPengajuan', b.id, sm.value, sd.value);
+      toast(r.pesan); tutup(); muat(true);
+    } catch (e) {
+      if (e.kode === 'SESI') { tutup(); galat(e.message, e.kode); return; }
+      await bukaAssign(b.id, e.message); muat(true);   // muat ulang pilihan, tampilkan alasan gagal
+    }
+  }
+
+  async function tolak(id) {
+    const p = tabel.concat(pending).filter(x => x.id === id)[0] || { nama: '', tujuan: '' };
+    const alasan = await dialog({ judul: 'Tolak pengajuan?', html: rinci([['Pemohon', p.nama], ['Tujuan', p.tujuan]]),
+      input: 'Alasan penolakan (wajib, akan dilihat pemohon)', labelYa: 'Ya, tolak pengajuan', labelBatal: 'Batal', bahaya: true });
+    if (!alasan) return;
+    try {
+      const r = await kirim('adminTolakPengajuan', id, alasan);
+      toast(r.pesan); muat(true);
+      if (modalAktif === 'pending' || modalAktif === 'assign') bukaPengajuan();
+    } catch (e) {
+      if (e.kode === 'SESI') { tutup(); galat(e.message, e.kode); return; }
+      toast(e.message); muat(true);
+    }
+  }
+
+  // ---------------- Mobil tersedia ----------------
+  function bukaTersedia() { modalAktif = 'tersedia'; muatTersedia('', ''); }
+
+  async function muatTersedia(tanggal, jenis) {
+    if (!q('#f-tgl')) {
+      popup(shell({ ikon: 'check', warna: 'ic-hijau', judul: 'Daftar Mobil Tersedia', sub: 'Cek ketersediaan jadwal mobil tersedia di PLN UP3 Malang dan penugasan dinas',
+                    tab: 'Mobil Tersedia', tabIkon: 'check', body: memuatHtml(), foot: FOOT_TUTUP }));
+    } else q('#f-tgl').disabled = true;
+    try { renderTersedia(await kirim('adminGetMobilTersedia', tanggal, jenis)); }
+    catch (e) { gagalMuat(e); }
+  }
+
+  function renderTersedia(r) {
+    mobilItems = r.items || [];
+    const jenis = '<option value="">Semua Kategori</option>' + (r.jenisList || []).map(j => '<option value="' + esc(j) + '"' + (j === r.jenis ? ' selected' : '') + '>' + esc(j) + '</option>').join('');
+    const filter = '<div class="da-filter"><div class="da-filter-h"><span>' + ikon('sliders') + 'Filter Ketersediaan Armada Pool</span><span class="pill hijau">' + r.bebas + ' Armada Standby Tanpa Bentrok</span></div>' +
+      '<div class="da-filter-g da-f"><div><label for="f-tgl">' + ikon('calendar') + 'Tanggal Pemakaian</label><input type="date" id="f-tgl" value="' + esc(r.tanggal) + '"></div>' +
+      '<div><label for="f-jenis">' + ikon('layers') + 'Kategori Unit</label><div class="pilih putih"><select id="f-jenis">' + jenis + '</select>' + ikon('chevron') + '</div></div>' +
+      '<button class="btn utama kecil" style="padding:12px 16px" data-aksi="cek">' + ikon('search') + 'Cek</button></div></div>';
+    const kartu = mobilItems.length ? mobilItems.map((m, i) =>
+      '<div class="da-car"><div class="da-car-h"><div class="da-car-t"><b>' + esc(m.nama) + '</b><span class="plat">' + esc(m.plat) + '</span></div>' +
+        '<div class="da-car-b"><button class="btn utama kecil" data-aksi="tugaskan" data-i="' + i + '">' + ikon('idcard') + 'Tugaskan Unit Ini</button>' +
+        '<button class="btn sekunder kecil" data-aksi="kalender" data-i="' + i + '">' + ikon('calendar') + 'Lihat Kalender Unit</button></div></div>' +
+      '<div class="da-car-g"><div>' +
+        '<div class="da-row">' + ikon('users') + '<span>Kapasitas: <b>' + (m.kapasitas ? m.kapasitas + ' Penumpang' : '-') + '</b></span>' + (m.asal ? '<span class="da-chip">' + esc(m.asal) + '</span>' : '') + '</div>' +
+        '<div class="da-row">' + ikon('check') + '<span>Status Jadwal: <span class="' + (m.bebas ? 'ok-t' : 'warn-t') + '">' + esc(m.jadwal) + '</span></span></div>' +
+        (m.keterangan ? '<div class="da-row">' + ikon('info') + '<span>' + esc(m.keterangan) + '</span></div>' : '') +
+      '</div><div class="da-car-r"><div class="da-kv"><span>Speedometer Terakhir:</span><b>' + esc(km(m.km)) + (m.km ? ikon('check') : '') + '</b></div>' +
+        (m.driverTetap ? '<div class="da-kv"><span>Driver Tetap:</span><b>' + esc(m.driverTetap) + '</b></div>' : '') + '</div></div></div>'
+    ).join('') : '<div class="da-kosong">Tidak ada unit yang tersedia untuk filter ini.</div>';
+    const foot = '<span class="da-fnote"><b>' + r.poolReady + ' kendaraan siap jalan</b>, ' + r.poolTidak + ' unit tidak tersedia (perawatan dll.)</span>' +
+      '<button class="btn sekunder kecil" data-aksi="tutup">Tutup</button>' +
+      '<button class="btn utama kecil" data-aksi="booking-baru">' + ikon('plus') + 'Jadwalkan Booking Baru</button>';
+    popup(shell({ ikon: 'check', warna: 'ic-hijau', judul: 'Daftar Mobil Tersedia', badge: r.poolReady + ' Unit Siap Operasional', badgeCls: 'hijau',
+                  sub: 'Cek ketersediaan jadwal mobil tersedia di PLN UP3 Malang dan penugasan dinas', tab: 'Mobil Tersedia (' + mobilItems.length + ')', tabIkon: 'check', body: filter + kartu, foot: foot }));
+  }
+
+  async function tugaskanUnit(i) {
+    const m = mobilItems[Number(i)];
+    if (!m) return;
+    try {
+      pending = (await kirim('adminGetPengajuanMenunggu')).daftar || [];
+      if (!pending.length) { toast('Tidak ada pengajuan yang menunggu untuk ditugaskan ke unit ini.'); return; }
+      presel = { id: m.id, nama: m.nama, plat: m.plat };
+      modalAktif = 'pending';
+      renderPengajuan();
+    } catch (e) { gagalMuat(e); }
+  }
+
+  async function kalender(i) {
+    const m = mobilItems[Number(i)];
+    if (!m) return;
+    toast('Memuat jadwal...');
+    try {
+      const list = (await kirim('adminGetJadwalMobil', m.id)).daftar || [];
+      dialog({ judul: 'Jadwal ' + m.nama + ' (' + m.plat + ')', labelYa: 'Tutup',
+        html: list.length ? '<div class="kal">' + list.map(j => '<div><b>' + esc(j.tanggal) + ' &bull; ' + esc(j.jam) + '</b> <span class="pill">' + esc(j.status) + '</span>' +
+          '<small>' + esc(j.tujuan) + ' &mdash; ' + esc(j.pemohon) + ' (' + esc(j.id) + ')</small></div>').join('') + '</div>'
+          : '<p class="cat">Belum ada jadwal terdekat untuk unit ini.</p>' });
+    } catch (e) { toast(e.message); }
+  }
+
+  // ---------------- Mobil sedang jalan ----------------
+  async function bukaJalan() {
+    modalAktif = 'jalan';
+    const c = { ikon: 'car', warna: 'ic-biru', judul: 'Rincian Mobil Sedang Jalan', sub: 'Sistem Pemantauan Status Armada & Perjalanan Dinas Berjalan PLN UP3 Malang' };
+    popup(shell({ ikon: c.ikon, warna: c.warna, judul: c.judul, sub: c.sub, tab: 'Mobil Sedang Jalan', tabIkon: 'car', body: memuatHtml(), foot: FOOT_TUTUP }));
+    try {
+      const list = (await kirim('adminGetMobilSedangJalan')).daftar || [];
+      const kartu = list.length ? list.map(j =>
+        '<div class="da-car"><div class="da-car-h"><div class="da-car-t"><b>' + esc(j.mobil) + '</b><span class="plat">' + esc(j.plat) + '</span>' +
+          (j.asal ? '<span class="da-bag">' + esc(j.asal) + '</span>' : '') +
+          '<span class="pill ' + (j.terlambat ? 'merah' : 'jalan') + '">' + (j.terlambat ? 'Terlambat' : 'Sedang Berjalan') + '</span></div></div>' +
+        '<div class="da-car-g"><div>' +
+          '<div class="da-row">' + ikon('user') + '<span>Driver: <b>' + esc(j.driver) + '</b> <small class="cat">(ID ' + esc(j.idDriver) + ')</small></span></div>' +
+          '<div class="da-row">' + ikon('users') + '<span>Pemohon: <b>' + esc(j.pemohon) + (j.bagian ? ' (' + esc(j.bagian) + ')' : '') + '</b></span><span class="da-chip">' + esc(j.penumpang) + ' Penumpang</span></div>' +
+          '<div class="da-row">' + ikon('route') + '<span>' + esc(j.tujuan) + (j.keperluan ? ' (' + esc(j.keperluan) + ')' : '') + '</span></div>' +
+        '</div><div class="da-car-r"><div class="da-kv"><span>Jadwal Perjalanan:</span><b>Berangkat ' + esc(j.berangkat) + '</b></div>' +
+          '<div class="da-kv"><span>Est. Kembali:</span><b class="' + (j.terlambat ? 'red-t' : 'blue-t') + '">' + esc(j.kembali) + '</b></div>' +
+          '<div class="da-kv"><span>Speedometer Awal:</span><b>' + esc(km(j.kmAwal)) + (j.kmAwal ? ikon('check') : '') + '</b></div></div></div></div>'
+      ).join('') : '<div class="da-kosong">Tidak ada kendaraan yang sedang berjalan.</div>';
+      const foot = '<span class="da-fnote">' + ikon('refresh') + 'Data diperbarui setiap pop-up dibuka</span>' +
+        '<button class="btn utama kecil" data-aksi="peta">' + ikon('map') + 'Buka Monitoring Peta</button>' +
+        '<button class="btn sekunder kecil" data-aksi="tutup">Tutup</button>';
+      popup(shell({ ikon: c.ikon, warna: c.warna, judul: c.judul, badge: list.length + ' Kendaraan di Lapangan', sub: c.sub, tab: 'Mobil Sedang Jalan (' + list.length + ')', tabIkon: 'car', body: kartu, foot: foot }));
+    } catch (e) { gagalMuat(e); }
+  }
+
+  // ---------------- Pemasangan ----------------
+  const AKSI = {
+    ulang: () => muat(true),
+    menunggu: bukaPengajuan, jalan: bukaJalan, tersedia: bukaTersedia,
+    filter: a => { filterAktif = a.dataset.f; renderTabel(); },
+    semua: () => toast('Halaman semua pengajuan segera hadir'),
+    proses: a => bukaAssign(a.dataset.id), tolak: a => tolak(a.dataset.id), setuju: setujui,
+    tutup: tutup, 'batal-presel': () => { presel = null; renderPengajuan(); },
+    cek: () => muatTersedia(q('#f-tgl').value, q('#f-jenis').value),
+    tugaskan: a => tugaskanUnit(a.dataset.i), kalender: a => kalender(a.dataset.i),
+    'booking-baru': () => toast('Fitur Jadwalkan Booking Baru segera hadir'),
+    peta: () => toast('Fitur monitoring peta belum tersedia')
+  };
+
+  function init() {
+    R.addEventListener('click', e => {
+      if (e.target.id === 'p-overlay') { tutup(); return; }
+      if (e.target.closest('#b-masuk')) {
+        e.preventDefault();
+        try { sessionStorage.removeItem('sid'); } catch (x) {}
+        google.script.run
+          .withSuccessHandler(h => { document.open(); document.write(h); document.close(); })
+          .bukaLogin();
+        return;
+      }
+      const a = e.target.closest('[data-aksi]');
+      if (a && AKSI[a.dataset.aksi]) AKSI[a.dataset.aksi](a);
+    });
+    R.addEventListener('change', e => { if (e.target.id === 'sel-mobil') gantiMobil(); });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || App.sekarang !== 'beranda') return;
+      if (dlgSelesai) dlgSelesai(); else tutup();
+    });
+  }
+
+  App.daftar('beranda', { init: init, tampil: () => muat(), tinggal: () => { if (dlgSelesai) dlgSelesai(); tutup(); } });
+})();
+</script>

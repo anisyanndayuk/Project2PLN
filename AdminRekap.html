@@ -1,0 +1,113 @@
+<style>
+#h-rekap{display:grid;gap:18px}
+#h-rekap .info{margin:0}
+#h-rekap .btn.utama{flex:none}
+#h-rekap .btn.kecil{padding:10px 14px;font-size:12.5px;border-radius:10px}
+#h-rekap .btn svg.i{width:15px;height:15px}
+
+.rk-stat{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rk-kartu{background:#fff;border:1px solid var(--garis);border-radius:14px;padding:16px}
+.rk-label{font-size:11.5px;font-weight:700;letter-spacing:.5px;color:#3A4150;text-transform:uppercase;margin-bottom:6px}
+.rk-nilai{font-size:28px;font-weight:800;line-height:1.1}
+.rk-nilai small{font-size:13px;font-weight:600;color:var(--abu);margin-left:4px}
+.rk-sub{font-size:12px;color:var(--abu);margin-top:8px}
+.memuat .rk-nilai{color:#CBD5E1}
+
+.rk-panel{background:#fff;border:1px solid var(--garis);border-radius:14px;overflow:hidden}
+.rk-alat{display:flex;gap:10px;flex-wrap:wrap;padding:16px 16px 12px}
+.rk-cari{position:relative;flex:1;min-width:220px}
+.rk-cari svg.i{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--abu)}
+.rk-cari input,.rk-pilih select{width:100%;padding:11px 14px;border:1px solid #D0DAF0;border-radius:10px;background:var(--panel);font:inherit;color:var(--teks)}
+.rk-cari input{padding-left:36px}
+.rk-pilih{position:relative;width:190px}
+.rk-pilih select{appearance:none;padding-right:36px}
+.rk-pilih svg.i{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;width:14px;height:14px}
+.rk-chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 14px}
+.rk-chip{border:1px solid var(--garis);background:#fff;border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#3A4150}
+.rk-chip.aktif{background:var(--biru);border-color:var(--biru);color:#fff}
+
+.rk-bungkus{overflow-x:auto}
+table.rk-tbl{width:100%;border-collapse:collapse;min-width:980px}
+.rk-tbl thead th{background:var(--panel);text-align:left;padding:14px 16px;font-size:11.5px;font-weight:700;letter-spacing:.6px;color:#3A4150;text-transform:uppercase;white-space:nowrap}
+.rk-tbl tbody td{padding:14px 16px;border-bottom:1px solid var(--garis);font-size:13.5px;vertical-align:middle}
+.rk-tbl small{display:block;font-size:11.5px;color:var(--abu);margin-top:2px}
+.rk-tbl td b{font-weight:700}
+.rk-kode{display:inline-block;background:#EEF2FA;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700}
+.rk-orang{display:flex;gap:10px;align-items:center}
+.rk-av{width:32px;height:32px;border-radius:50%;background:#DCEEFB;color:var(--biru);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.rk-teks{max-width:230px}
+.rk-abu{color:var(--abu)}
+.rk-kosong td{text-align:center;color:var(--abu);padding:40px 0!important}
+.rk-pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
+.rk-pill.ok{background:#DCFCE7;color:var(--hijau)}.rk-pill.merah{background:#FDE2E2;color:#B42318}.rk-pill.abu{background:#EEF1F6;color:#475569}
+.rk-rating{white-space:nowrap;font-weight:700}
+.rk-b{color:#F59E0B;letter-spacing:1px}.rk-k{color:#CBD5E1;letter-spacing:1px}
+.rk-rating em{font-style:normal;margin-left:6px}
+
+.rk-kaki{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px;font-size:12.5px;color:#3A4150}
+.rk-baris{display:flex;gap:6px;align-items:center}
+.rk-baris select{padding:5px 8px;border:1px solid #D0DAF0;border-radius:8px;background:var(--panel);font:inherit}
+.rk-pager{display:flex;gap:4px}
+.rk-pager button{min-width:32px;height:32px;border:0;border-radius:8px;background:transparent;font-weight:700;cursor:pointer}
+.rk-pager button:hover:not(:disabled){background:var(--bg)}
+.rk-pager button.aktif{background:var(--kuning)}
+.rk-pager button:disabled{opacity:.4;cursor:not-allowed}
+
+@media (max-width:1100px){.rk-stat{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:720px){.rk-pilih{width:100%}}
+</style>
+
+<div id="rk-galat" class="info galat" hidden>
+  <span id="rk-galat-teks"></span>
+  <a class="btn sekunder" id="rk-masuk" target="_top" hidden>Masuk lagi</a>
+  <button class="btn sekunder" id="rk-ulang" data-aksi="ulang">Coba lagi</button>
+</div>
+
+<section class="rk-stat">
+  <div class="rk-kartu">
+    <div class="rk-label">Total Tiket</div>
+    <div class="rk-nilai"><span id="rk-s-tiket">-</span></div>
+    <div class="rk-sub" id="rk-s-tiket-sub">-</div>
+  </div>
+  <div class="rk-kartu">
+    <div class="rk-label">Total Jarak</div>
+    <div class="rk-nilai"><span id="rk-s-km">-</span><small>KM</small></div>
+    <div class="rk-sub">Dari KM awal dan akhir perjalanan</div>
+  </div>
+  <div class="rk-kartu">
+    <div class="rk-label">Rata-rata Rating</div>
+    <div class="rk-nilai"><span id="rk-s-rating">-</span><small>/ 5.00</small></div>
+    <div class="rk-sub" id="rk-s-rating-sub">-</div>
+  </div>
+  <div class="rk-kartu">
+    <div class="rk-label">Rata-rata Durasi</div>
+    <div class="rk-nilai"><span id="rk-s-durasi">-</span><small>jam / trip</small></div>
+    <div class="rk-sub">Dari waktu mulai sampai selesai</div>
+  </div>
+</section>
+
+<section class="rk-panel">
+  <div class="rk-alat">
+    <div class="rk-cari"><svg class="i"><use href="#search"/></svg><input type="search" id="rk-cari" placeholder="Cari kode tiket, pemohon, tujuan, nopol, driver..." autocomplete="off"></div>
+    <div class="rk-pilih"><select id="rk-bulan" aria-label="Periode"></select><svg class="i"><use href="#chevron"/></svg></div>
+    <div class="rk-pilih"><select id="rk-bagian" aria-label="Bagian"></select><svg class="i"><use href="#chevron"/></svg></div>
+    <button class="btn utama kecil" id="rk-ekspor" data-aksi="ekspor"><svg class="i"><use href="#layers"/></svg>Ekspor CSV</button>
+  </div>
+  <div class="rk-chips" id="rk-chips"></div>
+  <div class="rk-bungkus">
+    <table class="rk-tbl">
+      <thead><tr>
+        <th>Kode Booking</th><th>Tanggal &amp; Jam</th><th>Pemohon &amp; Bagian</th><th>Tujuan Perjalanan</th>
+        <th>Armada &amp; Nopol</th><th>Driver</th><th>Status</th><th>Rating</th>
+      </tr></thead>
+      <tbody id="rk-tbody"><tr class="rk-kosong"><td colspan="8">Memuat data...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="rk-kaki">
+    <span id="rk-info">-</span>
+    <label class="rk-baris">Baris:
+      <select id="rk-baris"><option>5</option><option>10</option><option>20</option><option>50</option></select>
+    </label>
+    <div class="rk-pager" id="rk-pager"></div>
+  </div>
+</section>
