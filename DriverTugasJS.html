@@ -1,0 +1,137 @@
+<script>
+(function () {
+  const R = $('#h-tugas'), q = s => $(s, R);
+  const PER_HAL = 10;
+  let data = null, filter = 'semua', hal = 1;
+
+  const telp = s => { s = String(s || '').replace(/\D/g, ''); return s && s[0] === '8' ? '0' + s : s; };
+  const SEMUA = { semua: 'Semua', hari_ini: 'Hari Ini', mendatang: 'Mendatang', terlewat: 'Terlewat' };
+  const LABEL_STATUS = { berjalan: 'Berjalan', hari_ini: 'Disetujui', mendatang: 'Disetujui', terlewat: 'Terlewat' };
+
+  const daftarTampil = () => !data ? [] : data.tugas.filter(t => filter === 'semua' || t.kategori === filter);
+
+  // Banner: bedakan "tidak bisa ditugaskan" (merah) dan peringatan (kuning). Kosong bila tidak ada.
+  function isiBanner() {
+    const p = data.penugasan || {}, el = q('#tg-info');
+    const teks = !p.bisa ? p.alasan : p.peringatan;
+    el.hidden = !teks;
+    el.classList.toggle('galat', !p.bisa);
+    el.textContent = teks || '';
+  }
+
+  function isiTab() {
+    const j = data.jumlah, nilai = { semua: j.semua, hari_ini: j.hariIni, mendatang: j.mendatang, terlewat: j.terlewat };
+    R.querySelectorAll('#tg-tab button').forEach(b => {
+      const f = b.dataset.f;
+      b.classList.toggle('on', f === filter);
+      b.querySelector('span').textContent = nilai[f];
+      if (f === 'terlewat') b.hidden = !j.terlewat && filter !== 'terlewat';
+    });
+  }
+
+  function barisTabel(t, i) {
+    const tel = telp(t.hp), kelas = t.kategori === 'berjalan' ? 'sorot' : t.kategori === 'terlewat' ? 'lewat' : '';
+    const pill = '<span class="pill ' + (t.kategori === 'berjalan' ? 'jalan' : t.kategori === 'terlewat' ? 'lewat' : '') + '">' + LABEL_STATUS[t.kategori] + '</span>';
+    return '<tr class="' + kelas + '" data-i="' + i + '" tabindex="0">' +
+      '<td class="tg-tgl" data-l="Tanggal &amp; jam"><b>' + esc(t.tanggal ? tglPendek(t.tanggal) : '-') + '</b><small>' + esc(t.jam || '-') + (t.tiba ? ' - ' + esc(t.tiba) : '') + ' WIB</small>' +
+        (t.kategori === 'hari_ini' ? '<br><span class="tg-hari">HARI INI</span>' : '') + '</td>' +
+      '<td data-l="Tujuan &amp; keperluan"><b>' + esc(t.tujuan || '-') + '</b><div class="ket">' + esc(t.keperluan || '') + '</div></td>' +
+      '<td data-l="Pemohon"><b>' + esc(t.pemohon) + '</b><div class="ket">' + esc(t.bagian) + (tel ? ' &middot; ' + esc(tel) : '') + '</div></td>' +
+      '<td data-l="Mobil"><div class="tg-mobil"><span>' + esc(t.mobil || '-') + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></td>' +
+      '<td data-l="Penumpang">' + esc(t.penumpang) + ' orang</td>' +
+      '<td data-l="Status">' + pill + '</td>' +
+      '<td class="tg-aksi"><button type="button" class="btn sekunder kecil" data-aksi="detail" data-i="' + i + '">Detail</button></td></tr>';
+  }
+
+  function kosongPesan() {
+    if (!data.profilDriverAda) return ['car', 'Akun belum terdaftar sebagai driver', 'Hubungi admin untuk mendaftarkan akun Anda di data driver.'];
+    if (filter === 'hari_ini') return ['calendar', 'Tidak ada tugas hari ini', 'Penugasan dari admin akan muncul di sini.'];
+    if (filter === 'mendatang') return ['calendar', 'Belum ada tugas mendatang', 'Tugas yang disetujui admin akan muncul di sini.'];
+    if (filter === 'terlewat') return ['calendar', 'Tidak ada tugas terlewat', ''];
+    return ['car', 'Belum ada tugas', 'Penugasan dari admin akan muncul di sini.'];
+  }
+
+  function render() {
+    R.classList.remove('memuat');
+    isiBanner(); isiTab();
+    const j = data.jumlah;
+    q('#tg-sub').textContent = j.semua ? j.semua + ' tugas aktif' + (j.hariIni ? ', ' + j.hariIni + ' hari ini' : '') + '.' : 'Penugasan dari admin yang belum selesai.';
+
+    const list = daftarTampil(), total = list.length, hlm = Math.max(1, Math.ceil(total / PER_HAL));
+    if (hal > hlm) hal = hlm;
+    const mulai = (hal - 1) * PER_HAL, irisan = list.slice(mulai, mulai + PER_HAL);
+
+    if (!total) {
+      const k = kosongPesan();
+      q('#tg-isi').innerHTML = '<div class="kosong">' + ikon(k[0]) + '<b>' + k[1] + '</b>' + (k[2] ? '<p>' + k[2] + '</p>' : '') + '</div>';
+    } else {
+      q('#tg-isi').innerHTML = '<table class="tg-tabel"><thead><tr><th>Tanggal &amp; jam</th><th>Tujuan &amp; keperluan</th><th>Pemohon &amp; bagian</th><th>Mobil</th><th>Penumpang</th><th>Status</th><th></th></tr></thead><tbody>' +
+        irisan.map((t, i) => barisTabel(t, mulai + i)).join('') + '</tbody></table>';
+    }
+
+    const p = q('#tg-halaman');
+    p.hidden = total <= PER_HAL;
+    if (!p.hidden) {
+      let tombol = '';
+      for (let i = 1; i <= hlm; i++) tombol += '<button type="button" data-h="' + i + '" class="' + (i === hal ? 'on' : '') + '">' + i + '</button>';
+      p.innerHTML = '<small>Menampilkan ' + (mulai + 1) + '-' + (mulai + irisan.length) + ' dari ' + total + ' tugas</small><div>' +
+        '<button type="button" data-h="' + (hal - 1) + '"' + (hal === 1 ? ' disabled' : '') + '>&lsaquo;</button>' + tombol +
+        '<button type="button" data-h="' + (hal + 1) + '"' + (hal === hlm ? ' disabled' : '') + '>&rsaquo;</button></div>';
+    }
+  }
+
+  function galat(pesan, kode) {
+    R.classList.remove('memuat');
+    if (data) { toast(pesan || 'Gagal memuat tugas.'); return; }
+    const el = q('#tg-info');
+    el.hidden = false; el.classList.add('galat');
+    el.textContent = kode === 'SESI' ? (pesan || 'Sesi berakhir. Silakan masuk lagi.') : (pesan || 'Tidak dapat terhubung ke server.');
+    q('#tg-isi').innerHTML = '<div class="kosong">' + ikon('car') + '<b>Data belum dapat dimuat</b><p>Periksa koneksi, lalu klik Segarkan.</p></div>';
+  }
+
+  function terima(d) {
+    if (!d || !d.ok) return galat(d && d.pesan, d && d.kode);
+    data = d; el_info_reset(); render();
+  }
+  const el_info_reset = () => q('#tg-info').classList.remove('galat');
+
+  async function muat() {
+    if (!data) R.classList.add('memuat');
+    try { await ambil('tugas', 'driverTugas', 45000, terima); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  // Modal Detail memerlukan konteks ringkas: hari ini. State 'berjalan' dibaca dari status tugas itu sendiri.
+  const bukaDetail = i => {
+    const t = data && data.tugas[Number(i)];
+    if (!t) return;
+    if (typeof Modal === 'undefined') return toast('Modal belum siap. Coba lagi.');
+    Modal.detail(t, { hari: data.hari, state: t.kategori === 'berjalan' ? 'berjalan' : 'siap', saatIni: t.kategori === 'berjalan' ? t : null });
+  };
+
+  function init() {
+    R.querySelector('#tg-tab').addEventListener('click', e => {
+      const b = e.target.closest('button[data-f]');
+      if (!b || !data) return;
+      filter = b.dataset.f; hal = 1; render();
+    });
+    q('#tg-halaman').addEventListener('click', e => {
+      const b = e.target.closest('button[data-h]');
+      if (!b || b.disabled) return;
+      hal = Number(b.dataset.h); render();
+      R.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+    q('#tg-isi').addEventListener('click', e => {
+      const r = e.target.closest('tr[data-i]');
+      if (r) bukaDetail(r.dataset.i);
+    });
+    q('#tg-isi').addEventListener('keydown', e => {
+      const r = e.target.closest('tr[data-i]');
+      if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); bukaDetail(r.dataset.i); }
+    });
+    q('#tg-segarkan').addEventListener('click', () => { delete App.cache.tugas; muat(); });
+  }
+
+  App.daftar('tugas', { init: init, tampil: muat });
+})();
+</script>

@@ -1,6 +1,6 @@
 // ==========================================
 // PLNDinas - Kode.gs (AUTH: Landing, Login, Register, Verifikasi, Reset Password)
-// Fitur dashboard Pemohon ada di BerandaPemohon.gs
+// Fitur dashboard Pemohon ada di Pemohon.gs
 // ==========================================
 const SPREADSHEET_ID = '1msXBs4CB047sayFPQfgWzXATOCQNR5EAiScQoQmWe-M';
 const SHEET_PENGGUNA = 'PENGGUNA';
@@ -15,7 +15,7 @@ var DAFTAR_BAGIAN = [
 const PREFIX_ID = { 'Pemohon': 'USR', 'Admin': 'ADM', 'Driver': 'DRV' };
 const HALAMAN_DASHBOARD = { 'Pemohon': 'dashboardPemohon', 'Admin': 'dashboardAdmin', 'Driver': 'dashboardDriver' };
 // Nama file HTML cangkang (shell) tiap dashboard
-const FILE_DASHBOARD = { 'dashboardPemohon': 'PemohonApp', 'dashboardAdmin': 'DashboardAdmin', 'dashboardDriver': 'DriverApp' };
+const FILE_DASHBOARD = { 'dashboardPemohon': 'PemohonApp', 'dashboardAdmin': 'AdminApp', 'dashboardDriver': 'DriverApp' };
 const STATUS_TERVERIFIKASI = 'Terverifikasi';
 const STATUS_BELUM_VERIFIKASI = 'Belum Verifikasi';
 const RESET_DURASI_MS = 60 * 60 * 1000;   // link reset berlaku 1 jam
@@ -446,12 +446,17 @@ function kirimEmail_(to, subjek, nama, isi, teksTombol, link, catatan) {
 // ==========================================
 const HALAMAN = {
   Pemohon: {
-    BerandaPemohon:     'BerandaP',
-    BuatBookingPemohon: 'BuatBookingP',
-    BookingSayaPemohon: 'BookingSayaP',
-    RiwayatPemohon:     'RiwayatP'
+    PemohonBeranda:     'PemohonBeranda',
+    PemohonBuatBooking: 'PemohonBuatBooking',
+    PemohonBookingSaya: 'PemohonBookingSaya',
+    PemohonRiwayat:     'PemohonRiwayat'
   },
-  Admin:  {},
+  Admin:  {
+    BerandaAdmin:         'AdminBeranda',
+    DataMobilDriverAdmin: 'AdminDataMobilDriver',
+    RekapLaporanAdmin:    'AdminRekap',
+    PenggunaAdmin:        'AdminPengguna'
+  },
   Driver: {}
 };
 

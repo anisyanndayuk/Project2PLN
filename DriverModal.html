@@ -1,0 +1,116 @@
+<!-- ============================================================
+     DriverModal.html : CSS + kerangka (markup) semua modal Driver
+     Isi modal diisi oleh DriverModalJS.html. Pemasangan ada di DriverApp.html:
+       - bagian [4], di bawah #toast: include file DriverModal
+       - bagian [6], setelah DriverBerandaJS: include file DriverModalJS
+     Animasi memakai keyframes yang sama dengan modal konfirmasi di DriverApp.html.
+     ============================================================ -->
+<style>
+/* ---- Kerangka modal besar ---- */
+.mdl{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:rgba(15,27,45,.45);animation:mdl-masuk .2s ease-out}
+.mdl[hidden]{display:none}
+.mdl.tutup{animation:mdl-keluar .16s ease-in forwards}
+.mdl-kotak{width:100%;max-width:560px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(15,27,45,.25);animation:kotak-masuk .25s cubic-bezier(.2,.9,.3,1.1)}
+.mdl.tutup .mdl-kotak{animation:kotak-keluar .16s ease-in forwards}
+.mdl-kepala{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid var(--garis)}
+.mdl-kepala h3{font-size:17px;line-height:1.3}
+.mdl-kepala small{display:block;color:var(--abu);font-size:12px;margin-top:2px}
+.mdl-x{flex:none;width:34px;height:34px;border:0;border-radius:10px;background:var(--bg);color:var(--abu);display:grid;place-items:center;cursor:pointer}
+.mdl-x:hover{background:var(--garis)}
+.mdl-isi{padding:18px 24px;overflow-y:auto;flex:1 1 auto}
+.mdl-aksi{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 24px 20px;border-top:1px solid var(--garis)}
+.mdl-aksi:empty{display:none}
+.mdl-catatan{flex-basis:100%;text-align:right;color:var(--abu);font-size:12px;margin:-2px 0 0}
+
+/* ---- Isi: judul tugas, rincian, ringkasan singkat ---- */
+.mdl-kode{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.mdl-kode .kode{color:var(--abu);font-weight:700;font-size:12px}
+.mdl-judul-tugas{font-size:18px;line-height:1.35;margin-bottom:14px}
+.mdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.mdl-grid .lebar{grid-column:1/-1}
+.mdl-grid small,.mdl-ringkas small{display:block;color:var(--abu);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;margin-bottom:2px}
+.mdl-grid b{font-weight:700}
+.mdl-grid a{color:var(--biru);font-weight:600;text-decoration:none;display:inline-flex;gap:4px;align-items:center}
+.mdl-baris-mobil{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mdl-ringkas{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--bg);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+.mdl-ringkas b{display:block}
+
+/* ---- Formulir (Mulai / Selesai) ---- */
+.fm{margin-bottom:16px}
+.fm>label,.fm>.lbl{display:block;font-weight:700;margin-bottom:6px}
+.fm .bantu{color:var(--abu);font-size:12px;margin-top:6px}
+.fm .petunjuk{display:inline-block;background:var(--panel);color:var(--biru);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;margin-bottom:8px}
+.fm input[type=text],.fm textarea{width:100%;border:1.5px solid var(--garis);border-radius:10px;padding:11px 14px;font:inherit;background:#fff;color:var(--teks)}
+.fm textarea{resize:vertical;min-height:84px}
+.fm input:focus,.fm textarea:focus{outline:none;border-color:var(--biru)}
+.fm.salah input,.fm.salah textarea,.fm.salah .foto-area{border-color:var(--merah)}
+.fm .galat-teks{display:none;color:var(--merah);font-size:12px;font-weight:600;margin-top:6px}
+.fm.salah .galat-teks{display:block}
+.foto-area{width:100%;display:grid;justify-items:center;gap:6px;padding:26px 12px;border:2px dashed #CBD5E1;border-radius:12px;background:#F8FAFC;color:var(--abu);cursor:pointer;font:inherit}
+.foto-area:hover{border-color:var(--biru);background:var(--panel)}
+.foto-area svg.i{width:30px;height:30px}
+.foto-area b{color:var(--teks)}
+.foto-prev{display:flex;gap:12px;align-items:center;border:1.5px solid var(--garis);border-radius:12px;padding:8px}
+.foto-prev img{width:96px;height:72px;object-fit:cover;border-radius:8px;background:var(--bg)}
+.foto-prev span{flex:1;min-width:0;color:var(--abu);font-size:12px}
+.btn.kecil{padding:8px 12px;font-size:12px}
+.galat-umum{display:none;background:#FEE2E2;border:1px solid #FECACA;color:#991B1B;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-weight:600}
+.galat-umum.tampil{display:block}
+
+/* ---- Ringkasan perjalanan selesai ---- */
+.sukses{display:grid;justify-items:center;text-align:center;gap:6px;padding:6px 0 16px}
+.sukses .centang{width:56px;height:56px;border-radius:50%;background:#DCFCE7;color:var(--hijau);display:grid;place-items:center;margin-bottom:6px}
+.sukses .centang svg.i{width:28px;height:28px;stroke-width:2.5}
+.sukses h4{font-size:18px}.sukses p{color:var(--abu)}
+.mdl-stat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mdl-stat div{background:var(--bg);border-radius:12px;padding:12px 14px}
+.mdl-stat b{font-size:20px;display:block}
+.mdl-stat small{color:var(--abu);font-size:11px;font-weight:600;text-transform:uppercase}
+
+/* ---- Total perjalanan / jarak ---- */
+.mdl-filter{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.mdl-filter label{display:block;font-weight:700;font-size:12px;margin-bottom:4px}
+.mdl-filter select{width:100%;border:1.5px solid var(--garis);border-radius:10px;padding:10px 12px;font:inherit;background:#fff;color:var(--teks)}
+.mdl-ikhtisar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.mdl-ikhtisar div{background:var(--panel);border-radius:12px;padding:12px 14px}
+.mdl-ikhtisar div.utama{background:var(--kuning)}
+.mdl-ikhtisar small{display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--abu)}
+.mdl-ikhtisar div.utama small{color:var(--teks)}
+.mdl-ikhtisar b{font-size:22px}
+.mdl-ikhtisar em{font-style:normal;font-size:12px;color:var(--abu);font-weight:600;margin-left:4px}
+.mdl-daftar{display:grid;gap:8px;max-height:280px;overflow-y:auto}
+.mdl-daftar .t{display:flex;gap:12px;justify-content:space-between;align-items:center;border:1px solid var(--garis);border-radius:12px;padding:10px 12px}
+.mdl-daftar .t b{display:block}
+.mdl-daftar .t small{color:var(--abu)}
+.mdl-daftar .t .km{text-align:right;white-space:nowrap;font-weight:700}
+.mdl-daftar .t .km small{display:block;font-weight:500}
+.mdl-memuat{text-align:center;color:var(--abu);padding:24px 0}
+
+@media (max-width:560px){
+  .mdl{padding:0;align-items:end}
+  .mdl-kotak{max-width:none;max-height:92vh;border-radius:16px 16px 0 0}
+  .mdl-grid,.mdl-filter{grid-template-columns:1fr}
+  .mdl-aksi .btn{flex:1 1 100%}
+}
+</style>
+
+<!-- Ikon tambahan khusus modal -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  </defs>
+</svg>
+
+<!-- Kerangka modal: judul, isi, dan tombol diisi oleh Modal.buka() -->
+<div class="mdl" id="mdl" hidden role="dialog" aria-modal="true" aria-labelledby="mdl-judul">
+  <div class="mdl-kotak">
+    <div class="mdl-kepala">
+      <div><h3 id="mdl-judul"></h3><small id="mdl-sub" hidden></small></div>
+      <button type="button" class="mdl-x" id="mdl-x" aria-label="Tutup"><svg class="i"><use href="#x"/></svg></button>
+    </div>
+    <div class="mdl-isi" id="mdl-isi"></div>
+    <div class="mdl-aksi" id="mdl-aksi"></div>
+  </div>
+</div>

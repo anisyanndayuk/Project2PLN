@@ -181,6 +181,7 @@ main{padding:24px 28px}
          Fitur selain Beranda diberi atribut hidden. -->
     <main>
       <section id="h-beranda" class="halaman"><?!= includeDriver_('DriverBeranda') ?></section>
+      <section id="h-tugas" class="halaman" hidden><?!= includeDriver_('DriverTugas') ?></section>
       <!-- Fitur berikutnya: tambah <section id="h-NAMA" class="halaman" hidden> + include DriverNAMA, lalu include DriverNAMAJS di bagian [6] -->
     </main>
   </div>
@@ -190,6 +191,9 @@ main{padding:24px 28px}
      [4] TOAST (elemen pesan singkat, dipakai fungsi toast())
      ============================================================ -->
 <div id="toast" role="status"></div>
+
+<!-- Modal Driver (Detail Tugas, Mulai, Selesai, Ringkasan, Total): isinya diatur DriverModalJS -->
+<?!= includeDriver_('DriverModal') ?>
 
 <!-- Modal konfirmasi: diisi dan dibuka oleh fungsi konfirmasi() di JS inti -->
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-judul">
@@ -336,6 +340,8 @@ $('#u-tgl').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'lon
      Fitur baru: tambah satu baris include DriverNAMAJS di sini.
      ============================================================ -->
 <?!= includeDriver_('DriverBerandaJS') ?>
+<?!= includeDriver_('DriverModalJS') ?>
+<?!= includeDriver_('DriverTugasJS') ?>
 
 <!-- ============================================================
      [7] HALAMAN PERTAMA YANG DIBUKA SETELAH LOGIN
