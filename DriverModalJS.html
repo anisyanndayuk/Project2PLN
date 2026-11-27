@@ -43,20 +43,38 @@ var Modal = (function () {
     tmrTutup = setTimeout(() => { el.hidden = true; el.classList.remove('tutup'); isiEl.innerHTML = ''; aksiEl.innerHTML = ''; }, 160);
   }
 
-  // Semua tombol/aksi dikunci selama data dikirim ke server
+  // Semua tombol/aksi dikunci selama data dikirim ke server.
+  // Tombol X tetap bisa diklik: saat mengirim ia memberi tahu "sedang diproses" (bukan diam saja),
+  // dan setelah 45 detik tanpa jawaban server, kunci dilepas supaya modal tidak macet selamanya.
+  let tmrKunci = null;
   function kunci(ya) {
     sibuk = ya;
+    clearTimeout(tmrKunci);
     aksiEl.querySelectorAll('button').forEach(b => { b.disabled = ya ? true : b.dataset.nonaktif === '1'; });
-    $('#mdl-x').disabled = ya;
+    $('#mdl-x').classList.toggle('sibuk', ya);
+    if (ya) tmrKunci = setTimeout(() => {
+      sibuk = false; $('#mdl-x').classList.remove('sibuk');
+      aksiEl.querySelectorAll('button').forEach(b => { b.disabled = b.dataset.nonaktif === '1'; });
+      toast('Server belum menjawab. Anda bisa menutup lalu coba lagi.');
+    }, 45000);
   }
 
-  $('#mdl-x').addEventListener('click', () => { if (!sibuk) tutup(); });
-  el.addEventListener('mousedown', e => { if (e.target === el && !sibuk) tutup(); });
+  function cobaTutup() { if (sibuk) toast('Data sedang dikirim, mohon tunggu sebentar…'); else tutup(); }
+  $('#mdl-x').addEventListener('click', cobaTutup);
+  el.addEventListener('mousedown', e => { if (e.target === el) cobaTutup(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el.hidden && !sibuk) tutup(); });
 
-  // Muat ulang Beranda setelah data berubah (mulai / selesai)
-  function segarkanBeranda() {
+  // Perbarui data setelah aksi (mulai / selesai) TANPA spinner: data Beranda dan Tugas diambil diam-diam di belakang modal,
+  // disimpan ke cache, lalu halaman yang sedang terbuka digambar ulang dari cache (instan, tidak ada kilasan spinner).
+  // Bila pengambilan gagal, halaman memuat sendiri seperti biasa (dengan spinner) agar pengguna tetap melihat data terbaru.
+  async function segarkanBeranda() {
     delete App.cache.beranda; delete App.cache.tugas;
+    Object.keys(App.cache).forEach(k => { if (k.indexOf('riwayat') === 0) delete App.cache[k]; });   // riwayat ikut diperbarui setelah perjalanan selesai
+    try {
+      const hasil = await Promise.all([panggil('driverBeranda'), panggil('driverTugas')]);
+      if (hasil[0] && hasil[0].ok !== false) App.cache.beranda = { data: hasil[0], t: Date.now() };
+      if (hasil[1] && hasil[1].ok !== false) App.cache.tugas = { data: hasil[1], t: Date.now() };
+    } catch (e) { /* dibiarkan: halaman akan memuat sendiri di bawah */ }
     const h = App.halaman[App.sekarang] || App.halaman.beranda;
     if (h && h.tampil) h.tampil();
   }
@@ -249,7 +267,7 @@ var Modal = (function () {
         '<div><small>Durasi</small><b>' + esc(menit(r.durasiMenit)) + '</b></div>' +
         '<div><small>Jam berangkat</small><b>' + esc(r.mulai || '-') + ' WIB</b></div>' +
         '<div><small>Jam tiba</small><b>' + esc(r.selesai || '-') + ' WIB</b></div></div>';
-    buka('Perjalanan Selesai', '', html, [{ teks: 'Kembali ke Beranda', kelas: 'utama', klik: () => { tutup(); Router.pindah('beranda'); } }]);
+    buka('Perjalanan Selesai', '', html, [{ teks: 'Kembali ke Beranda', kelas: 'utama', klik: () => { tutup(); if (App.sekarang !== 'beranda') Router.pindah('beranda', !!(App.cache.beranda && App.cache.beranda.data)); } }]);
   }
 
   // ---------- 5. Total Perjalanan / Total Jarak Tempuh ----------

@@ -152,7 +152,7 @@ const ADM = {
   opsiDriver(d, b) {
     const hasil = [];
     d.driver.forEach(r => {
-      if (!aktif_(r.STATUS_AKUN)) return;
+      if (!aktif_(r.AKTIF)) return;
       if (!ADM.simOk(r, b.selesai)) return;
       const id = teks_(r.ID_DRIVER);
       if (ADM.bentrok(d.booking, 'idDriver', id, b.mulai, b.selesai, b.id, d.now)) return;
@@ -397,6 +397,7 @@ const MDRV = {
   PREFIX_MOBIL: 'MBL',                 // ID baru: MBL-001, MBL-002, ...
   PREFIX_DRIVER: 'DRV',                // ID baru: DRV-001, ...
   STATUS_MOBIL: ['Tersedia', 'Perawatan', 'Tidak Aktif'],
+  STATUS_DRIVER_BARU: 'Siap Tugas',       // nilai kolom STATUS_DRIVER untuk driver baru
   SIM_HAMPIR_HARI: 30                  // SIM yang habis <= 30 hari lagi diberi peringatan
 };
 
@@ -467,7 +468,7 @@ function mdAktifNilai_(ya) {
 function mdItemDriver_(d, r) {
   const id = teks_(r.ID_DRIVER);
   const p = d.pengguna[teks_(r.ID_PENGGUNA)] || {};
-  const aktif = !!aktif_(r.STATUS_AKUN);
+  const aktif = !!aktif_(r.AKTIF);
   const exp = ADM.parseWaktu(r.MASA_BERLAKU_SIM);
   let sim = 'kosong', simTeks = 'Masa berlaku belum diisi', simWarna = 'abu';
   if (exp) {
@@ -490,7 +491,7 @@ function mdItemDriver_(d, r) {
   return {
     id: id, idPengguna: teks_(r.ID_PENGGUNA), nama: ADM.namaDriver(d, r), hp: p.hp || '',
     jenisSim: teks_(r.JENIS_SIM), masaSim: exp ? ADM.hari(exp) : '', sim: sim, simTeks: simTeks, simWarna: simWarna,
-    jenisDriver: teks_(r.JENIS_DRIVER),
+    pengalaman: teks_(r.PENGALAMAN_TAHUN), rute: teks_(r.RUTE_DIKUASAI), sertifikasi: teks_(r.SERTIFIKASI),
     aktif: aktif, kode: kode, label: label, warna: warna, tugas: tugas
   };
 }
@@ -615,10 +616,9 @@ function adminSimpanDriver(sid, f) {
   return adminJalankan_(sid, () => {
     f = f || {};
     const id = teks_(f.id), idPengguna = teks_(f.idPengguna), jenisSim = teks_(f.jenisSim);
-    const masa = teks_(f.masaSim), jenisDriver = teks_(f.jenisDriver).substring(0, 60);
+    const masa = teks_(f.masaSim), peng = teks_(f.pengalaman);
     const aktif = f.aktif === true || f.aktif === 'true';
     if (!id && !idPengguna) throw new Error('Pilih pengguna yang akan dijadikan driver.');
-    if (['Tetap', 'Pengganti'].indexOf(jenisDriver) === -1) throw new Error('Pilih jenis driver: Tetap atau Pengganti.');
     if (!jenisSim) throw new Error('Jenis SIM wajib dipilih.');
     let masaTeks = '';
     if (masa) {
@@ -626,6 +626,7 @@ function adminSimpanDriver(sid, f) {
       if (!w) throw new Error('Masa berlaku SIM tidak valid.');
       masaTeks = ADM.hari(w);
     }
+    if (peng && (!/^\d+$/.test(peng) || Number(peng) > 60)) throw new Error('Pengalaman harus berupa angka tahun (0 sampai 60).');
 
     const lock = LockService.getScriptLock();
     lock.waitLock(15000);
@@ -636,12 +637,12 @@ function adminSimpanDriver(sid, f) {
       if (id && !ada) throw new Error('Driver tidak ditemukan.');
 
       const isi = {
-        JENIS_DRIVER: jenisDriver,
-        JENIS_SIM: jenisSim, MASA_BERLAKU_SIM: masaTeks
+        JENIS_SIM: jenisSim, MASA_BERLAKU_SIM: masaTeks, PENGALAMAN_TAHUN: peng,
+        RUTE_DIKUASAI: teks_(f.rute).substring(0, 200), SERTIFIKASI: teks_(f.sertifikasi).substring(0, 200)
       };
       if (ada) {
-        const berubah = !!aktif_(ada.STATUS_AKUN) !== aktif;
-        if (berubah) isi.STATUS_AKUN = mdAktifNilai_(aktif);
+        const berubah = !!aktif_(ada.AKTIF) !== aktif;
+        if (berubah) isi.AKTIF = mdAktifNilai_(aktif);
         mdUbahBaris_(t, ada, isi);
         let pesan = 'Data driver ' + id + ' diperbarui.';
         if (berubah && !aktif) {
@@ -656,7 +657,8 @@ function adminSimpanDriver(sid, f) {
       if (daftar.some(o => teks_(o.ID_PENGGUNA) === idPengguna)) throw new Error('Pengguna ini sudah terdaftar sebagai driver.');
       isi.ID_DRIVER = mdIdBaru_(daftar, 'ID_DRIVER', MDRV.PREFIX_DRIVER);
       isi.ID_PENGGUNA = idPengguna;
-      isi.STATUS_AKUN = mdAktifNilai_(aktif);
+      isi.STATUS_DRIVER = MDRV.STATUS_DRIVER_BARU;
+      isi.AKTIF = mdAktifNilai_(aktif);
       mdTambahBaris_(t, isi);
       return { ok: true, pesan: 'Driver ditambahkan dengan ID ' + isi.ID_DRIVER + '.' };
     } finally {
@@ -885,7 +887,6 @@ function adminGetRiwayat(sid, bulan) {
         mobil: m ? teks_(m.JENIS) : '', plat: m ? teks_(m.PLAT) : '',
         driver: r ? ADM.namaDriver(d, r) : '',
         kode: b.status, status: ADM.labelStatus(b.status),
-        telat: (b.status === 'selesai' && pj && b.selesai && ADM.parseWaktu(pj.WAKTU_SELESAI)) ? Math.max(0, Math.floor((ADM.parseWaktu(pj.WAKTU_SELESAI) - b.selesai) / 60000)) : 0,
         rating: rating, ulasan: ulasan, km: km, durasi: durasi
       };
     });
@@ -908,74 +909,5 @@ function adminGetRiwayat(sid, bulan) {
         durasi: durAda.length ? jumlah(durAda, x => x.durasi) / durAda.length : null
       }
     };
-  });
-}
-
-// ==========================================
-// BOOKTRIP PLN - AdminNotif (isi lonceng admin)
-// ==========================================
-function adminGetNotifikasi(sid) {
-  return adminJalankan_(sid, () => {
-    const d = ADM.muat(true);
-    const kini = d.now.getTime(), HARI = 86400000;
-    const list = [];
-    const tambah = (urutan, warna, jenis, teks, hal) => list.push({ urutan: urutan, warna: warna, jenis: jenis, teks: teks, hal: hal });
-    const nama = b => (d.pengguna[b.idPemohon] || {}).nama || b.idPemohon || '-';
-    const mobil = id => { const m = d.mobil.filter(x => teks_(x.ID_MOBIL) === id)[0]; return m ? teks_(m.JENIS) : (id || 'Mobil'); };
-    const waktu = x => x ? ADM.tgl(x) + ' ' + ADM.jam(x) : '-';
-    const baru = x => !!x && kini - x.getTime() <= 7 * HARI;   // hanya 7 hari terakhir
-    const kolomBatal = d.tBooking.h.ALASAN_BATAL;
-
-    let menunggu = 0;
-    d.booking.forEach(b => {
-      if (b.status === 'ditunggu' || b.status === 'diajukan') {
-        if (ADM.mendesak(b, d.now)) tambah(2, 'kuning', 'Mendesak', nama(b) + ', ' + b.tujuan + ', ' + waktu(b.mulai), 'beranda');
-        else menunggu++;
-      } else if (b.statusEfektif === 'terlambat') {
-        tambah(1, 'merah', 'Terlambat', mobil(b.idMobil) + ' belum kembali (est. ' + waktu(b.selesai) + ')', 'beranda');
-      } else if (b.statusEfektif === 'disetujui' && b.mulai && b.mulai.getTime() < kini && baru(b.mulai)) {
-        tambah(3, 'kuning', 'Belum dimulai', mobil(b.idMobil) + ' ke ' + b.tujuan + ', jadwal ' + waktu(b.mulai), 'beranda');
-      } else if (b.status === 'dibatalkan' && baru(b.mulai)) {
-        const alasan = kolomBatal === undefined ? '' : teks_(d.tBooking.data[b._i][kolomBatal]);
-        tambah(5, 'abu', 'Dibatalkan', nama(b) + ', ' + b.tujuan + (alasan ? ' (' + alasan + ')' : ''), 'rekap');
-      }
-    });
-    if (menunggu) tambah(4, 'biru', 'Baru', menunggu + ' pengajuan menunggu persetujuan', 'beranda');
-
-    d.driver.forEach(r => {
-      const exp = ADM.parseWaktu(r.MASA_BERLAKU_SIM);
-      if (!exp || !aktif_(r.STATUS_AKUN)) return;
-      const sisa = Math.floor((exp.getTime() + HARI - kini) / HARI);
-      if (sisa <= 30) tambah(6, sisa <= 0 ? 'merah' : 'kuning', 'SIM', ADM.namaDriver(d, r) + (sisa <= 0 ? ', SIM sudah habis ' : ', SIM habis ') + ADM.tgl(exp), 'mobildriver');
-    });
-
-    Object.keys(d.perjalanan).forEach(id => {
-      const p = d.perjalanan[id], catatan = teks_(p.CATATAN_KENDALA);
-      if (catatan && catatan !== '-' && baru(ADM.parseWaktu(p.WAKTU_SELESAI) || ADM.parseWaktu(p.WAKTU_MULAI))) {
-        tambah(7, 'kuning', 'Kendala', mobil(teks_(p.ID_MOBIL)) + ': ' + catatan, 'rekap');
-      }
-    });
-
-    ADM.objek(bukaSheet_('RATING', []), 'ID_BOOKING').forEach(o => {
-      const nilai = Number(String(o.NILAI).replace(',', '.'));
-      if (nilai >= 1 && nilai <= 2 && baru(ADM.parseWaktu(o.TANGGAL))) {
-        const r = d.driver.filter(x => teks_(x.ID_DRIVER) === teks_(o.ID_DRIVER))[0];
-        tambah(8, 'merah', 'Rating rendah', nilai + ' bintang untuk ' + (r ? ADM.namaDriver(d, r) : '-') + (teks_(o.KOMENTAR) ? ': ' + teks_(o.KOMENTAR) : ''), 'rekap');
-      }
-    });
-
-    list.sort((a, c) => a.urutan - c.urutan);
-    return { ok: true, daftar: list };
-  });
-}
-
-function adminGetProfil(sid) {
-  return adminJalankan_(sid, user => {
-    const o = ADM.objek(bukaSheet_(ADM.S_PENGGUNA, []), 'ID_PENGGUNA').filter(x => teks_(x.ID_PENGGUNA) === teks_(user.id))[0];
-    if (!o) throw new Error('Data akun tidak ditemukan.');
-    return { ok: true, profil: {
-      id: teks_(o.ID_PENGGUNA), nama: teks_(o.NAMA), username: teks_(o.USERNAME), email: teks_(o.EMAIL),
-      hp: teks_(o.NO_HP), bagian: teks_(o.BAGIAN), peran: teks_(o.PERAN), verifikasi: teks_(o.STATUS_VERIFIKASI)
-    } };
   });
 }

@@ -291,3 +291,10 @@ function pjlFolderFoto_() {
   var it = DriveApp.getFoldersByName(PJL.FOLDER_FOTO);
   return it.hasNext() ? it.next() : DriveApp.createFolder(PJL.FOLDER_FOTO);
 }
+
+// Jalankan SEKALI dari editor Apps Script (pilih fungsi ini lalu klik Run) untuk memberi izin Drive.
+// Tanpa izin ini, foto odometer tidak bisa disimpan dan Mulai/Selesai Perjalanan gagal.
+function izinkanDrive() {
+  var folder = pjlFolderFoto_();
+  Logger.log('Izin Drive aktif. Folder foto: ' + folder.getName() + ' (' + folder.getUrl() + ')');
+}

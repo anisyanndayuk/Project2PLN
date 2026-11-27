@@ -6,7 +6,7 @@
   const FILTER_MOBIL = [['', 'Semua Status'], ['tersedia', 'Tersedia'], ['pakai', 'Sedang Dipakai'], ['lain', 'Tidak Siap']];
   const FILTER_DRIVER = [['', 'Semua Status'], ['standby', 'Siap Tugas'], ['bertugas', 'Bertugas'], ['nonaktif', 'Nonaktif'], ['sim', 'SIM Perlu Dicek']];
   const KOLOM_MOBIL = ['Unit', 'Plat', 'Kapasitas', 'Driver Tetap', 'KM Terakhir', 'Status', 'Aksi'];
-  const KOLOM_DRIVER = ['Driver', 'Jenis Driver', 'SIM', 'Status Akun', 'Status Sekarang'];
+  const KOLOM_DRIVER = ['Driver', 'SIM', 'Pengalaman', 'Rute Dikuasai', 'Sertifikasi', 'Status Sekarang'];
   const STATUS_MOBIL = ['Tersedia', 'Perawatan', 'Tidak Aktif'];
   const JENIS_SIM = ['A', 'B1', 'B1 Umum', 'B2', 'B2 Umum', 'C'];
 
@@ -64,7 +64,7 @@
     if (!daftar.some(f => f[0] === saring)) saring = '';
     q('#md-filter').innerHTML = daftar.map(f => '<option value="' + f[0] + '">' + esc(f[1]) + '</option>').join('');
     q('#md-filter').value = saring;
-    q('#md-cari').placeholder = tab === 'mobil' ? 'Cari nama unit, plat, atau driver...' : 'Cari nama driver, jenis driver, atau SIM...';
+    q('#md-cari').placeholder = tab === 'mobil' ? 'Cari nama unit, plat, atau driver...' : 'Cari nama driver, SIM, atau rute...';
   }
 
   function barisMobil(x) {
@@ -79,9 +79,10 @@
 
   function barisDriver(x, adaCek) {
     return '<tr><td><b>' + esc(x.nama) + '</b><small>' + esc(x.id) + (x.hp ? ' &bull; ' + esc(x.hp) : '') + '</small></td>' +
-      '<td>' + strip(x.jenisDriver) + '</td>' +
       '<td>' + (x.jenisSim ? '<b>SIM ' + esc(x.jenisSim) + '</b>' : '<span class="md-abu">-</span>') + '<small>' + pill(x.simWarna, x.simTeks) + '</small></td>' +
-      '<td>' + pill(x.aktif ? 'ok' : 'abu', x.aktif ? 'Aktif' : 'Nonaktif') + '</td>' +
+      '<td>' + (x.pengalaman ? esc(x.pengalaman) + ' Tahun' : '<span class="md-abu">-</span>') + '</td>' +
+      '<td class="md-teks">' + strip(x.rute) + '</td>' +
+      '<td class="md-teks">' + strip(x.sertifikasi) + '</td>' +
       '<td>' + pill(x.warna, x.label) + (x.tugas ? '<small class="md-teks">' + esc(x.tugas) + '</small>' : '') + '</td>' +
       (adaCek ? '<td>' + pill(x.cek.warna, x.cek.label) + (x.cek.detail ? '<small class="md-teks">' + esc(x.cek.detail) + '</small>' : '') + '</td>' : '') +
       '<td class="tengah"><button class="btn sekunder kecil" data-aksi="edit" data-id="' + esc(x.id) + '">Edit</button></td></tr>';
@@ -111,7 +112,7 @@
           : saring === 'bebas' ? (x.cek && x.cek.kode === 'bebas')
           : saring === 'tidak' ? (x.cek && x.cek.kode !== 'bebas')
           : x.kode === saring);
-      const teks = (mobil ? [x.jenis, x.plat, x.asal, x.driverTetap, x.id] : [x.nama, x.hp, x.jenisDriver, x.jenisSim, x.id]).join(' ').toLowerCase();
+      const teks = (mobil ? [x.jenis, x.plat, x.asal, x.driverTetap, x.id] : [x.nama, x.hp, x.jenisSim, x.rute, x.sertifikasi, x.id]).join(' ').toLowerCase();
       return cocokStatus && (!kata || teks.indexOf(kata) !== -1);
     });
     if (!mobil && cek) list.sort((a, c) => (a.cek.kode === 'bebas' ? 0 : 1) - (c.cek.kode === 'bebas' ? 0 : 1));   // yang tersedia di atas
@@ -165,10 +166,12 @@
       : (calon.length ? fld('pengguna', 'Pengguna', sel('pengguna', calon.map(c => [c.id, c.nama + (c.hp ? ' - ' + c.hp : '')]), ''), true)
         : '<div class="md-f penuh"><div class="info" style="margin-top:12px">Belum ada pengguna berperan Driver yang belum terdaftar. Tambahkan dulu akunnya di menu Pengguna.</div></div>');
     return '<div class="md-grid">' + pengguna +
-      fld('jenisdrv', 'Jenis Driver', sel('jenisdrv', [['', 'Pilih jenis driver'], ['Tetap', 'Tetap'], ['Pengganti', 'Pengganti']], x.jenisDriver || '')) +
       fld('sim', 'Jenis SIM', sel('sim', [['', 'Pilih jenis SIM']].concat(sims.map(s => [s, 'SIM ' + s])), x.jenisSim || '')) +
       fld('exp', 'Masa Berlaku SIM', inp('exp', 'date', x.masaSim || '')) +
-      fld('aktif', 'Status Akun', sel('aktif', [['1', 'Aktif'], ['0', 'Nonaktif']], x.aktif === false ? '0' : '1'), true) + '</div>';
+      fld('peng', 'Pengalaman (Tahun)', inp('peng', 'number', x.pengalaman || '', 'min="0" max="60"')) +
+      fld('aktif', 'Status Akun', sel('aktif', [['1', 'Aktif'], ['0', 'Nonaktif']], x.aktif === false ? '0' : '1')) +
+      fld('rute', 'Rute Dikuasai', inp('rute', 'text', x.rute, 'maxlength="200" placeholder="Contoh: Malang, Surabaya, Probolinggo"'), true) +
+      fld('sert', 'Sertifikasi', inp('sert', 'text', x.sertifikasi, 'maxlength="200" placeholder="Contoh: Defensive Driving"'), true) + '</div>';
   }
 
   function bukaForm(jenis, id) {
@@ -180,8 +183,8 @@
     form = mobil
       ? { fn: 'adminSimpanMobil', ambil: () => ({ id: id || '', jenis: v('jenis'), plat: v('plat'), kapasitas: v('kapasitas'), asal: v('asal'), km: v('km'),
                                                  idDriverTetap: v('tetap'), status: v('status'), keterangan: v('ket') }) }
-      : { fn: 'adminSimpanDriver', ambil: () => ({ id: id || '', idPengguna: baru ? v('pengguna') : x.idPengguna, jenisDriver: v('jenisdrv'), jenisSim: v('sim'), masaSim: v('exp'),
-                                                  aktif: v('aktif') === '1' }) };
+      : { fn: 'adminSimpanDriver', ambil: () => ({ id: id || '', idPengguna: baru ? v('pengguna') : x.idPengguna, jenisSim: v('sim'), masaSim: v('exp'),
+                                                  pengalaman: v('peng'), aktif: v('aktif') === '1', rute: v('rute'), sertifikasi: v('sert') }) };
     q('#md-kotak').innerHTML =
       '<div class="md-mh"><h3>' + (baru ? 'Tambah ' : 'Edit ') + (mobil ? 'Mobil' : 'Driver') + '</h3>' +
         '<button class="md-x" data-aksi="tutup" aria-label="Tutup">' + ikon('close') + '</button></div>' +

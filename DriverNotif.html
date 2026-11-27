@@ -1,0 +1,47 @@
+<!-- ============================================================
+     DriverNotif.html : CSS notifikasi (lonceng navbar + panel dropdown). Markup lonceng & wadah #notif ada di header DriverApp.html;
+     isi panel digambar oleh DriverNotifJS.html. Awalan CSS: nt-
+     ============================================================ -->
+<style>
+.notif-wrap{position:relative}
+.lonceng b{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:var(--merah);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px #fff}
+.lonceng b[hidden]{display:none}
+.lonceng.getar svg{animation:nt-getar .7s ease-in-out}
+@keyframes nt-getar{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}
+
+.notif{position:absolute;right:0;top:calc(100% + 12px);width:390px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--garis);border-radius:18px;box-shadow:0 18px 44px rgba(15,27,45,.18);overflow:hidden;z-index:50;animation:nt-masuk .18s ease-out;transform-origin:top right}
+.notif[hidden]{display:none}
+@keyframes nt-masuk{from{opacity:0;transform:translateY(-6px) scale(.98)}}
+.nt-kepala{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--garis)}
+.nt-kepala h4{font-size:16px;display:flex;gap:8px;align-items:center}
+.nt-kepala h4 i{font-style:normal;background:#FEE2E2;color:#B91C1C;font-size:11px;font-weight:800;border-radius:99px;padding:2px 9px}
+.nt-semua{border:0;background:none;color:var(--biru);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;border-radius:8px;padding:5px 8px}
+.nt-semua:hover{background:#EEF3FD}
+.nt-semua:disabled{color:#94A3B8;cursor:default;background:none}
+.nt-daftar{max-height:min(460px,calc(100vh - 170px));overflow-y:auto;overscroll-behavior:contain}
+.nt-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:flex-start;width:100%;text-align:left;border:0;background:#fff;font:inherit;color:inherit;padding:13px 18px;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .15s}
+.nt-item:last-child{border-bottom:0}
+.nt-item:hover{background:#F8FAFC}
+.nt-item.baru{background:#F3F8FE}
+.nt-item.baru:hover{background:#E9F2FC}
+.nt-ik{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.nt-ik svg.i{width:18px;height:18px}
+.nt-ik.nt-j-tugas{background:#DBEAFE;color:#1D4ED8}
+.nt-ik.nt-j-sim{background:#FEF3C7;color:#B45309}
+.nt-ik.nt-j-peringatan,.nt-ik.nt-j-batal{background:#FEE2E2;color:#B91C1C}
+.nt-ik.nt-j-rating{background:#FEF3C7;color:#B45309}
+.nt-isi b{display:block;font-size:14px;font-weight:700;line-height:1.3}
+.nt-isi span{display:block;color:var(--abu);font-size:12.5px;line-height:1.4;margin-top:2px;word-break:break-word}
+.nt-titik{width:9px;height:9px;border-radius:50%;background:var(--biru);margin-top:6px;flex:none}
+.nt-item:not(.baru) .nt-titik{visibility:hidden}
+.nt-kosong{padding:38px 20px;text-align:center;color:var(--abu)}
+.nt-kosong svg.i{width:38px;height:38px;stroke-width:1.5;color:#CBD5E1;margin-bottom:8px}
+.nt-kosong b{display:block;color:var(--teks);font-size:15px;margin-bottom:3px}
+.nt-galat{padding:22px 18px;text-align:center;color:var(--abu);font-size:13px}
+.nt-galat button{margin-top:10px;border:1px solid var(--garis);background:#fff;font:inherit;font-weight:700;color:var(--biru);border-radius:10px;padding:7px 14px;cursor:pointer}
+@media (max-width:560px){
+  .notif-wrap{position:static}
+  .notif{position:fixed;left:12px;right:12px;top:76px;width:auto;max-width:none;transform-origin:top center}
+}
+@media (prefers-reduced-motion:reduce){.notif,.lonceng.getar svg{animation:none}}
+</style>

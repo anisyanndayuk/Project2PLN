@@ -1,7 +1,7 @@
 <script>
 (function () {
   const R = $('#h-rekap'), q = s => $(s, R);
-  let data = null, bulan = 'semua', status = '', bagian = '', cari = '', hal = 1, baris = 5, tampilNow = [];
+  let data = null, bulan = '', status = '', bagian = '', cari = '', hal = 1, baris = 5, tampilNow = [];
 
   const CHIP = [['', 'Semua'], ['selesai', 'Selesai'], ['ditolak', 'Ditolak'], ['dibatalkan', 'Dibatalkan']];
   const WARNA = { selesai: 'ok', ditolak: 'merah', dibatalkan: 'abu' };
@@ -64,8 +64,7 @@
       '<td class="rk-teks"><b>' + esc(x.tujuan || '-') + '</b>' + (x.keperluan ? '<small>' + esc(x.keperluan) + '</small>' : '') + '</td>' +
       '<td>' + (x.mobil || x.plat ? '<b>' + esc(x.mobil || '-') + '</b><small><span class="plat">' + esc(x.plat || '-') + '</span></small>' : '<span class="rk-abu">-</span>') + '</td>' +
       '<td>' + (x.driver ? esc(x.driver) : '<span class="rk-abu">-</span>') + '</td>' +
-      '<td><span class="rk-pill ' + (WARNA[x.kode] || 'abu') + '">' + esc(x.status) + '</span>' +
-      (x.telat ? '<small style="color:#B42318;font-weight:700">Terlambat ' + (x.telat >= 60 ? Math.floor(x.telat / 60) + ' jam ' : '') + (x.telat % 60) + ' menit</small>' : '') + '</td>' +
+      '<td><span class="rk-pill ' + (WARNA[x.kode] || 'abu') + '">' + esc(x.status) + '</span></td>' +
       '<td>' + rating + '</td></tr>';
   }
 
