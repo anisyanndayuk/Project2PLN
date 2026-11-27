@@ -63,6 +63,7 @@ function galat(pesan, kode) {
   tab[1].firstChild.textContent = 'Hari Ini (' + hariIni + ')';
   tab[2].firstChild.textContent = 'Mendesak (' + mendesak + ')';
   tab[2].querySelector('.titik').hidden = !mendesak;
+  tab.forEach(t => t.classList.toggle('aktif', t.dataset.f === filterAktif));
 
     const list = tabel.filter(p => filterAktif === 'hariini' ? p.hariIni : filterAktif === 'mendesak' ? p.mendesak : true);
     q('#t-body').innerHTML = list.length ? list.map(p => {
@@ -300,7 +301,6 @@ function galat(pesan, kode) {
           '<div class="da-kv"><span>Speedometer Awal:</span><b>' + esc(km(j.kmAwal)) + (j.kmAwal ? ikon('check') : '') + '</b></div></div></div></div>'
       ).join('') : '<div class="da-kosong">Tidak ada kendaraan yang sedang berjalan.</div>';
       const foot = '<span class="da-fnote">' + ikon('refresh') + 'Data diperbarui setiap pop-up dibuka</span>' +
-        '<button class="btn utama kecil" data-aksi="peta">' + ikon('map') + 'Buka Monitoring Peta</button>' +
         '<button class="btn sekunder kecil" data-aksi="tutup">Tutup</button>';
       popup(shell({ ikon: c.ikon, warna: c.warna, judul: c.judul, badge: list.length + ' Kendaraan di Lapangan', sub: c.sub, tab: 'Mobil Sedang Jalan (' + list.length + ')', tabIkon: 'car', body: kartu, foot: foot }));
     } catch (e) { gagalMuat(e); }
@@ -317,7 +317,6 @@ function galat(pesan, kode) {
     cek: () => muatTersedia(q('#f-tgl').value, q('#f-jenis').value),
     tugaskan: a => tugaskanUnit(a.dataset.i), kalender: a => kalender(a.dataset.i),
     'booking-baru': () => toast('Fitur Jadwalkan Booking Baru segera hadir'),
-    peta: () => toast('Fitur monitoring peta belum tersedia')
   };
 
   function init() {
@@ -342,5 +341,70 @@ function galat(pesan, kode) {
   }
 
   App.daftar('beranda', { init: init, tampil: () => muat(), tinggal: () => { if (dlgSelesai) dlgSelesai(); tutup(); } });
+})();
+</script>
+
+<style>
+.akun{cursor:pointer;border-radius:10px;padding:2px 4px}
+.akun:hover{background:var(--bg)}
+.prf-latar{position:fixed;inset:0;z-index:50;background:rgba(15,27,45,.4);opacity:0;visibility:hidden;transition:.25s}
+.prf-panel{position:absolute;top:0;right:0;bottom:0;width:340px;max-width:100%;display:flex;flex-direction:column;background:#fff;box-shadow:-16px 0 40px rgba(15,27,45,.2);transform:translateX(100%);transition:transform .25s}
+.prf-latar.buka{opacity:1;visibility:visible}
+.prf-latar.buka .prf-panel{transform:none}
+.prf-kepala{position:relative;padding:32px 20px 22px;text-align:center;background:var(--navy);color:#fff}
+.prf-foto{width:76px;height:76px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:var(--kuning);color:var(--navy);font-size:30px;font-weight:800}
+.prf-kepala b{display:block;font-size:18px;margin-bottom:6px;overflow-wrap:anywhere}
+.prf-tutup{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:7px;display:grid;cursor:pointer}
+.prf-isi{flex:1;overflow-y:auto;padding:8px 20px}
+.prf-baris{padding:12px 0;border-bottom:1px solid var(--garis)}
+.prf-baris small{display:block;color:var(--abu);font-size:11.5px;margin-bottom:2px}
+.prf-baris span{font-weight:600;overflow-wrap:anywhere}
+.prf-kaki{padding:16px 20px;border-top:1px solid var(--garis)}
+.prf-kaki .keluar{width:100%;margin:0}
+.prf-pesan{padding:28px 0;text-align:center;color:var(--abu)}
+</style>
+<script>
+(function () {
+  const akun = $('.akun');
+  akun.setAttribute('role', 'button'); akun.setAttribute('tabindex', '0'); akun.title = 'Lihat profil';
+  const latar = document.createElement('div');
+  latar.className = 'prf-latar';
+  latar.innerHTML = '<aside class="prf-panel" role="dialog" aria-label="Profil saya">' +
+    '<div class="prf-kepala"><button type="button" class="prf-tutup" aria-label="Tutup">' + ikon('close') + '</button>' +
+    '<div class="prf-foto"></div><b class="prf-nama"></b><span class="pill"></span></div>' +
+    '<div class="prf-isi"></div>' +
+    '<div class="prf-kaki"><button type="button" class="keluar">' + ikon('logout') + 'Keluar</button></div></aside>';
+  document.body.appendChild(latar);
+  const q = s => $(s, latar);
+
+  function kepala(nama, peran) {
+    q('.prf-nama').textContent = nama;
+    q('.prf-foto').textContent = (nama || '?').trim().charAt(0).toUpperCase();
+    q('.pill').textContent = peran || 'Admin';
+  }
+
+  async function buka() {
+    latar.classList.add('buka');
+    kepala($('#u-nama').textContent, 'Admin');
+    q('.prf-isi').innerHTML = '<div class="prf-pesan">Memuat...</div>';
+    q('.prf-tutup').focus();
+    try {
+      const r = await panggil('adminGetProfil');
+      if (!r || !r.ok) throw new Error((r && r.pesan) || 'Gagal memuat profil.');
+      const p = r.profil;
+      kepala(p.nama || p.username, p.peran);
+      q('.prf-isi').innerHTML = [['ID Pengguna', p.id], ['Username', p.username], ['Email', p.email], ['No. HP', p.hp], ['Bagian', p.bagian], ['Status Akun', p.verifikasi]]
+        .map(b => '<div class="prf-baris"><small>' + b[0] + '</small><span>' + esc(b[1] || '-') + '</span></div>').join('');
+    } catch (e) { q('.prf-isi').innerHTML = '<div class="prf-pesan">' + esc(e.message) + '</div>'; }
+  }
+  const tutup = () => latar.classList.remove('buka');
+
+  akun.addEventListener('click', buka);
+  akun.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(); } });
+  latar.addEventListener('click', e => {
+    if (e.target === latar || e.target.closest('.prf-tutup')) tutup();
+    else if (e.target.closest('.keluar')) { tutup(); $('#keluar').click(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') tutup(); });
 })();
 </script>
