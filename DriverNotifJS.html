@@ -1,0 +1,119 @@
+<!-- ============================================================
+     DriverNotifJS.html : logika notifikasi (lonceng navbar). Memanggil driverNotifikasi(sid) dan driverNotifBaca(sid, ids).
+     Memakai pembantu dari DriverApp.html: $, esc, ikon, panggil, toast, Router, App.
+     - Lencana angka di lonceng = jumlah belum dibaca. Disegarkan tiap 60 detik (hanya saat tab terlihat) dan saat panel dibuka.
+     - Klik notifikasi: ditandai dibaca (langsung di layar, disimpan di server) lalu membuka halaman terkait.
+     ============================================================ -->
+<script>
+(function () {
+  const bel = $('#lonceng'), lencana = $('#lonceng-n'), panel = $('#notif');
+  if (!bel || !panel) return;
+
+  const IKON = { tugas: 'list', sim: 'idcard', peringatan: 'alert', batal: 'ban', rating: 'star' };
+  const JEDA = 60000;
+  let data = null, galat = false, tmr = null, berhenti = false, sedangMuat = false, sudahPernah = false;
+
+  function belum() { return data ? data.daftar.filter(n => !n.dibaca).length : 0; }
+
+  function gambarLencana() {
+    const n = belum();
+    lencana.hidden = n === 0;
+    lencana.textContent = n > 9 ? '9+' : String(n);
+    bel.setAttribute('aria-label', n ? 'Notifikasi, ' + n + ' belum dibaca' : 'Notifikasi');
+  }
+
+  function itemHtml(n) {
+    return '<button type="button" class="nt-item' + (n.dibaca ? '' : ' baru') + '" data-id="' + esc(n.id) + '" data-tuju="' + esc(n.hal) + '">' +
+      '<span class="nt-ik nt-j-' + esc(n.jenis) + '">' + ikon(IKON[n.jenis] || 'bell') + '</span>' +
+      '<span class="nt-isi"><b>' + esc(n.judul) + '</b><span>' + esc(n.teks) + '</span></span>' +
+      '<span class="nt-titik" aria-hidden="true"></span></button>';
+  }
+
+  function gambarPanel() {
+    const n = belum();
+    let isi;
+    if (galat && !data) {
+      isi = '<div class="nt-galat">Notifikasi belum bisa dimuat.<br><button type="button" data-nt="ulang">Coba lagi</button></div>';
+    } else if (!data) {
+      isi = '<div class="nt-galat">Memuat…</div>';
+    } else if (!data.daftar.length) {
+      isi = '<div class="nt-kosong">' + ikon('bell') + '<b>Belum ada notifikasi</b>Penugasan baru, pengingat SIM, dan penilaian akan muncul di sini.</div>';
+    } else {
+      isi = '<div class="nt-daftar">' + data.daftar.map(itemHtml).join('') + '</div>';
+    }
+    panel.innerHTML = '<div class="nt-kepala"><h4>Notifikasi' + (n ? ' <i>' + n + ' baru</i>' : '') + '</h4>' +
+      '<button type="button" class="nt-semua" data-nt="semua"' + (n ? '' : ' disabled') + '>Tandai semua dibaca</button></div>' + isi;
+  }
+
+  async function muat(diam) {
+    if (berhenti || sedangMuat) return;
+    sedangMuat = true;
+    try {
+      const r = await panggil('driverNotifikasi');
+      if (!r || r.ok === false) {
+        if (r && r.kode === 'SESI') { berhenti = true; clearInterval(tmr); }
+        throw new Error('gagal');
+      }
+      const sebelum = belum();
+      data = r; galat = false;
+      gambarLencana();
+      if (!panel.hidden) gambarPanel();
+      if (diam !== true && sudahPernah && belum() > sebelum && panel.hidden) { bel.classList.remove('getar'); void bel.offsetWidth; bel.classList.add('getar'); }
+      sudahPernah = true;
+    } catch (e) {
+      galat = true;
+      if (!panel.hidden && !data) gambarPanel();
+    } finally { sedangMuat = false; }
+  }
+
+  function buka() {
+    panel.hidden = false; bel.setAttribute('aria-expanded', 'true');
+    gambarPanel();
+    muat(true);   // segarkan di belakang layar saat dibuka
+  }
+  function tutup(fokus) {
+    if (panel.hidden) return;
+    panel.hidden = true; bel.setAttribute('aria-expanded', 'false');
+    if (fokus) bel.focus();
+  }
+
+  // Tandai dibaca: tampil langsung, lalu simpan di server (kegagalan simpan tidak mengganggu pengguna)
+  function tandai(ids) {
+    if (!data) return;
+    const set = ids === 'semua' ? null : ids;
+    data.daftar.forEach(n => { if (!set || set.indexOf(n.id) >= 0) n.dibaca = true; });
+    gambarLencana();
+    panggil('driverNotifBaca', ids).catch(() => {});
+  }
+
+  bel.addEventListener('click', e => { e.stopPropagation(); panel.hidden ? buka() : tutup(); });
+  // Klik di luar panel menutupnya. Pakai composedPath (jalur saat klik terjadi): isi panel sering digambar ulang
+  // (misal "Tandai semua dibaca"), sehingga elemen yang diklik bisa sudah lepas dari DOM saat penangan ini berjalan.
+  const wrap = panel.parentElement;
+  document.addEventListener('click', e => { if (!panel.hidden && e.composedPath().indexOf(wrap) < 0) tutup(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') tutup(true); });
+
+  panel.addEventListener('click', e => {
+    const aksi = e.target.closest('[data-nt]');
+    if (aksi) {
+      if (aksi.dataset.nt === 'semua') { tandai('semua'); gambarPanel(); }
+      else if (aksi.dataset.nt === 'ulang') { galat = false; gambarPanel(); muat(true); }
+      return;
+    }
+    const it = e.target.closest('.nt-item');
+    if (!it) return;
+    tandai([it.dataset.id]);
+    const tuju = it.dataset.tuju;
+    tutup();
+    if (tuju && typeof Router !== 'undefined') Router.pindah(tuju);
+  });
+
+  // Segarkan berkala, hanya saat tab terlihat; segarkan juga begitu tab kembali dilihat
+  function jadwal() { clearInterval(tmr); tmr = setInterval(() => { if (!document.hidden) muat(); }, JEDA); }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) muat(); });
+  window.addEventListener('beforeunload', () => clearInterval(tmr));
+
+  jadwal();
+  muat(true);
+})();
+</script>

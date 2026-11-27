@@ -1,0 +1,98 @@
+<!-- ============================================================
+     DriverRating.html : markup + CSS halaman Rating Saya
+     Skor rata-rata, sebaran bintang 5-1 (bisa diklik untuk menyaring), dan daftar ulasan dari pemohon.
+     Dipasang di DriverApp.html dalam section h-rating. Logikanya ada di DriverRatingJS.html.
+     CSS memakai awalan rt- agar tidak bentrok dengan fitur lain.
+     ============================================================ -->
+<style>
+#h-rating{display:grid;gap:20px;align-content:start;grid-template-columns:minmax(0,1fr)}
+.rt-kepala{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.rt-kepala h2{font-size:22px;letter-spacing:-.01em}
+.rt-kepala p{color:var(--abu);margin-top:2px}
+.rt-segar{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--garis);background:#fff;color:var(--biru);font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;transition:.15s}
+.rt-segar:hover{border-color:var(--biru)}
+.rt-segar.putar svg.i{animation:rt-putar .8s linear infinite}
+@keyframes rt-putar{to{transform:rotate(360deg)}}
+
+/* ---- Skor + sebaran ---- */
+.rt-hero{display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:center;background:#fff;border:1px solid var(--garis);border-radius:20px;padding:24px 28px;box-shadow:0 4px 18px rgba(15,27,45,.06);position:relative;overflow:hidden}
+.rt-hero::before{content:"";position:absolute;left:0;top:0;right:0;height:5px;background:linear-gradient(90deg,var(--kuning),#FFD000)}
+.rt-skor{text-align:center;padding:6px 0}
+.rt-skor .angka{font-size:60px;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--navy)}
+.rt-skor .angka small{font-size:20px;font-weight:600;color:var(--abu);letter-spacing:0}
+.rt-bintang{display:flex;gap:3px;justify-content:center;margin:8px 0 6px}
+.rt-bintang span{color:#E2E8F0;font-size:24px;line-height:1}
+.rt-bintang span.on{color:#F59E0B}
+.rt-skor p{color:var(--abu);font-size:13px}
+.rt-sebaran{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+.rt-baris{display:grid;grid-template-columns:44px 1fr 34px;gap:12px;align-items:center;border:0;background:none;font:inherit;text-align:left;cursor:pointer;padding:4px 6px;border-radius:10px;color:var(--teks)}
+.rt-baris:hover{background:#F8FAFC}
+@media (max-width:900px){.rt-baris{padding:9px 8px;min-height:40px}}
+.rt-baris.aktif{background:var(--panel)}
+.rt-baris:focus-visible{outline:3px solid var(--biru);outline-offset:1px}
+.rt-baris b{display:inline-flex;gap:4px;align-items:center;font-size:13px}
+.rt-baris b i{font-style:normal;color:#F59E0B}
+.rt-batang{height:10px;border-radius:99px;background:#EEF2F7;overflow:hidden}
+.rt-batang i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#FBBF24,#F59E0B);width:0;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+.rt-baris span{color:var(--abu);font-size:13px;font-weight:700;text-align:right}
+
+/* ---- Penyaring + daftar ulasan ---- */
+.rt-saring{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rt-saring button{border:1px solid var(--garis);background:#fff;color:var(--teks);font:inherit;font-weight:700;font-size:13px;border-radius:99px;padding:7px 14px;cursor:pointer;transition:.15s}
+.rt-saring button:hover{border-color:var(--biru)}
+.rt-saring button.aktif{background:var(--kuning);border-color:#F2D400}
+.rt-saring button:focus-visible{outline:3px solid var(--biru);outline-offset:2px}
+.rt-saring .tulis{margin-left:auto;font-weight:600;color:var(--abu);display:inline-flex;gap:6px;align-items:center;background:none;border:0;padding:0;cursor:default}
+#rt-isi{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.rt-ulasan{background:#fff;border:1px solid var(--garis);border-radius:16px;padding:16px 20px;animation:rt-masuk .3s both}
+@keyframes rt-masuk{from{opacity:0;transform:translateY(6px)}}
+.rt-atas{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.rt-atas .rt-bintang{margin:0;justify-content:flex-start}
+.rt-atas .rt-bintang span{font-size:18px}
+.rt-tgl{color:var(--abu);font-size:12px;font-weight:600}
+.rt-teks{margin-top:8px;line-height:1.55;color:var(--teks)}
+.rt-teks.tanpa{color:var(--abu);font-style:italic}
+.rt-chip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.rt-chip span{display:inline-flex;gap:5px;align-items:center;background:#F1F5F9;color:#334155;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:600}
+.rt-chip svg.i{width:13px;height:13px}
+.rt-kosong{background:#fff;border:1px dashed #CBD5E1;border-radius:18px;padding:44px 20px;text-align:center;color:var(--abu)}
+.rt-kosong>svg.i{width:38px;height:38px;stroke-width:1.5;display:block;margin:0 auto 8px}
+.rt-kosong b{display:block;color:var(--teks);font-size:16px;margin-bottom:4px}
+.rt-lagi{justify-self:center}
+
+@media (max-width:760px){
+  .rt-hero{grid-template-columns:1fr;gap:18px;padding:20px 18px}
+  .rt-skor .angka{font-size:48px}
+  .rt-saring .tulis{margin-left:0;flex-basis:100%}
+}
+
+/* ---- Desain baru: banner halaman (gaya sama dengan Profil) ---- */
+.rt-kepala{position:relative;overflow:hidden;display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap;color:#fff;border-radius:22px;padding:26px 30px;margin-bottom:20px;background:linear-gradient(120deg,var(--navy) 0%,#0B6A8F 68%,#12839F 100%);box-shadow:0 12px 32px rgba(10,61,92,.22);animation:rt-masuk .4s both}
+.rt-kepala::before{content:"";position:absolute;right:-60px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,230,0,.17);pointer-events:none}
+.rt-kepala::after{content:"";position:absolute;left:42%;bottom:-120px;width:210px;height:210px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.rt-kepala>*{position:relative;z-index:1}
+.rt-kepala>div:first-child{display:flex;gap:16px;align-items:center;min-width:0}
+.rt-kepala .bn-ik{flex:none;width:54px;height:54px;border-radius:16px;background:var(--kuning);color:var(--navy);display:grid;place-items:center;box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+.rt-kepala .bn-ik svg.i{width:26px;height:26px}
+.rt-kepala h2{color:#fff;font-size:26px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.rt-kepala p{color:rgba(255,255,255,.85);margin-top:4px}
+.rt-segar{background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.38)!important;color:#fff!important;backdrop-filter:blur(6px);transition:.15s}
+.rt-segar:hover{background:rgba(255,255,255,.26)!important}
+@keyframes rt-masuk{from{opacity:0;transform:translateY(10px)}}
+@media (max-width:560px){.rt-kepala{padding:22px 20px}.rt-kepala h2{font-size:22px}.rt-kepala .bn-ik{width:46px;height:46px}}
+@media (prefers-reduced-motion:reduce){.rt-kepala{animation:none}}
+#rt-atas>*{box-shadow:0 8px 24px rgba(15,27,45,.09);animation:rt-masuk .45s both}
+</style>
+
+<div class="rt-kepala">
+  <div>
+    <span class="bn-ik"><svg class="i"><use href="#star"/></svg></span>
+    <div><h2>Rating Saya</h2>
+    <p id="rt-sub">Penilaian dari pemohon setelah perjalanan selesai.</p>
+    </div>
+  </div>
+  <button type="button" class="rt-segar" id="rt-segarkan"><svg class="i"><use href="#history"/></svg>Segarkan</button>
+</div>
+
+<div id="rt-atas"></div>
+<div id="rt-isi"></div>

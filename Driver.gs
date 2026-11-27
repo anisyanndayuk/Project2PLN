@@ -31,21 +31,27 @@ const DRV = {
     for (let r = 1; r < v.length; r++) {
       if (String(v[r][0]).trim() === '') continue;
       const o = {};
-      h.forEach((k, i) => o[k] = DRV.WAKTU.indexOf(k) > -1 ? t[r][i] : v[r][i]);
+      h.forEach((k, i) => o[k] = DRV.WAKTU.indexOf(k) > -1 ? DRV.waktuTeks(v[r][i], t[r][i]) : v[r][i]);
       out.push(o);
     }
     return out;
   },
   // Status driver: kolom STATUS_DRIVER (nama lama STATUS tetap terbaca)
   statusDrv(d) { return d ? (d.STATUS_DRIVER !== undefined ? d.STATUS_DRIVER : d.STATUS) : ''; },
+  // Sel waktu -> teks 'yyyy-MM-dd HH:mm:ss' (zona Jakarta). Sel bertipe tanggal dipakai langsung, jadi format tampilan
+  // sheet (dd/mm/yyyy atau yyyy-mm-dd) dan zona waktu spreadsheet tidak berpengaruh. Sel teks dibaca apa adanya.
+  waktuTeks(v, tampil) {
+    if (v instanceof Date && !isNaN(v.getTime()) && v.getFullYear() >= 1950) return Utilities.formatDate(v, DRV.ZONA, 'yyyy-MM-dd HH:mm:ss');
+    return String(tampil == null ? '' : tampil);
+  },
   sama(a, b) { return a != null && b != null && String(a).trim() !== '' && String(a).trim() === String(b).trim(); },
   st(s) { return String(s || '').trim().toLowerCase(); },
   kosong(s) { return String(s == null ? '' : s).trim() === ''; },
-  tgl(s) { return (String(s).match(/\d{4}-\d{2}-\d{2}/) || [''])[0]; },
+  tgl(s) { return DRV.tglBebas(s); },
   jam(s) { const m = String(s).match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; },
   iso(s) {
-    const m = String(s).match(/(\d{4}-\d{2}-\d{2})\D+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-    return m ? m[1] + 'T' + m[2].padStart(2, '0') + ':' + m[3] + ':' + (m[4] || '00') + '+07:00' : '';
+    const d = DRV.tgl(s), m = String(s).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    return d && m ? d + 'T' + m[1].padStart(2, '0') + ':' + m[2] + ':' + (m[3] || '00') + '+07:00' : '';
   },
   // Tanggal dari sel apa pun (objek Date, teks yyyy-mm-dd, atau dd/mm/yyyy) menjadi yyyy-mm-dd. Kosong bila tidak terbaca.
   tglBebas(v) {
@@ -146,6 +152,11 @@ function driverBeranda(sid) {
     const selesai = perj.filter(p => !DRV.kosong(p.WAKTU_SELESAI));
     const jarak = selesai.reduce((s, p) => s + (Number(p.JARAK_KM) || 0), 0);
     const nilai = milikku(DRV.baca(ss, 'RATING')).map(r => Number(r.NILAI)).filter(n => n > 0);
+    // Angka bulan ini (berdasarkan tanggal selesai) dan sisa masa berlaku SIM, untuk kartu info di Beranda
+    const bulanIni = hari.slice(0, 7);
+    const selesaiBulan = selesai.filter(p => String(DRV.tgl(p.WAKTU_SELESAI) || '').slice(0, 7) === bulanIni);
+    const jarakBulan = selesaiBulan.reduce((s, p) => s + (Number(p.JARAK_KM) || 0), 0);
+    const simTgl = drv ? DRV.tglBebas(drv.MASA_BERLAKU_SIM) : '';
 
     // Tugas
     const bentuk = b => driverBentukTugas_(b, mobil, orang, perj);
@@ -163,6 +174,8 @@ function driverBeranda(sid) {
       statusDriver: drv ? String(DRV.statusDrv(drv) || '') : '',           // Siap Tugas / Bertugas / Nonaktif / SIM Perlu Dicek
       penugasan: driverBisaDitugaskan_(drv, hari),
       total: selesai.length, jarak: jarak, rata: selesai.length ? jarak / selesai.length : 0,
+      bulanIni: selesaiBulan.length, jarakBulan: jarakBulan,
+      simSisaHari: simTgl ? DRV.selisihHari(hari, simTgl) : null,
       rating: nilai.length ? nilai.reduce((a, b) => a + b, 0) / nilai.length : null, ulasan: nilai.length,
       statusHariIni: berjalan.length ? 'bertugas' : hariIni.length ? 'ada' : 'kosong', jumlahHariIni: hariIni.length,
       state: berjalan.length ? 'berjalan' : hariIni.length ? 'siap' : 'kosong',

@@ -7,32 +7,40 @@
      ============================================================ -->
 <style>
 /* ---- Kerangka modal besar ---- */
-.mdl{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:rgba(15,27,45,.45);animation:mdl-masuk .2s ease-out}
+.mdl{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:rgba(15,27,45,.5);backdrop-filter:blur(3px);animation:mdl-masuk .2s ease-out}
 .mdl[hidden]{display:none}
 .mdl.tutup{animation:mdl-keluar .16s ease-in forwards}
 .mdl-kotak{width:100%;max-width:560px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(15,27,45,.25);animation:kotak-masuk .25s cubic-bezier(.2,.9,.3,1.1)}
 .mdl.tutup .mdl-kotak{animation:kotak-keluar .16s ease-in forwards}
-.mdl-kepala{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid var(--garis)}
-.mdl-kepala h3{font-size:17px;line-height:1.3}
+.mdl-kotak{position:relative;overflow:hidden;border-radius:20px!important}
+.mdl-kotak::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,var(--kuning),#FFD000);z-index:2}
+.mdl-kepala{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:26px 26px 16px;background:linear-gradient(180deg,#F4F8FF,#fff);border-bottom:1px solid var(--garis)}
+.mdl-kepala h3{font-size:18px;line-height:1.3;letter-spacing:-.01em}
 .mdl-kepala small{display:block;color:var(--abu);font-size:12px;margin-top:2px}
-.mdl-x{flex:none;width:34px;height:34px;border:0;border-radius:10px;background:var(--bg);color:var(--abu);display:grid;place-items:center;cursor:pointer}
-.mdl-x:hover{background:var(--garis)}
-.mdl-isi{padding:18px 24px;overflow-y:auto;flex:1 1 auto}
-.mdl-aksi{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 24px 20px;border-top:1px solid var(--garis)}
+.mdl-x{flex:none;width:36px;height:36px;border:0;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--garis);color:var(--abu);display:grid;place-items:center;cursor:pointer;transition:.15s}
+.mdl-x:hover{background:#FEE2E2;color:var(--merah);box-shadow:0 0 0 1px #FECACA}
+.mdl-x.sibuk{opacity:.5;cursor:progress}
+@media (max-width:640px){.mdl-x{width:42px;height:42px}}
+.mdl-isi{padding:20px 26px;overflow-y:auto;flex:1 1 auto}
+.mdl-aksi{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:16px 26px 22px;border-top:1px solid var(--garis);background:#FAFBFD}
+.mdl-aksi .btn{padding:13px 22px;border-radius:12px}
+.mdl-aksi .btn.utama{box-shadow:0 6px 16px rgba(255,214,0,.35);transition:transform .15s,box-shadow .15s}
+.mdl-aksi .btn.utama:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 20px rgba(255,214,0,.45)}
 .mdl-aksi:empty{display:none}
 .mdl-catatan{flex-basis:100%;text-align:right;color:var(--abu);font-size:12px;margin:-2px 0 0}
 
 /* ---- Isi: judul tugas, rincian, ringkasan singkat ---- */
 .mdl-kode{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .mdl-kode .kode{color:var(--abu);font-weight:700;font-size:12px}
-.mdl-judul-tugas{font-size:18px;line-height:1.35;margin-bottom:14px}
-.mdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.mdl-judul-tugas{font-size:20px;line-height:1.3;letter-spacing:-.01em;margin-bottom:16px;padding-left:12px;border-left:4px solid var(--kuning)}
+.mdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mdl-grid>div{background:#F8FAFC;border:1px solid var(--garis);border-radius:14px;padding:12px 14px}
 .mdl-grid .lebar{grid-column:1/-1}
 .mdl-grid small,.mdl-ringkas small{display:block;color:var(--abu);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;margin-bottom:2px}
 .mdl-grid b{font-weight:700}
 .mdl-grid a{color:var(--biru);font-weight:600;text-decoration:none;display:inline-flex;gap:4px;align-items:center}
 .mdl-baris-mobil{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.mdl-ringkas{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--bg);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+.mdl-ringkas{display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,#EEF3FD,#F8FAFC);border:1px solid #DBE6FB;border-radius:14px;padding:14px 16px;margin-bottom:18px}
 .mdl-ringkas b{display:block}
 
 /* ---- Formulir (Mulai / Selesai) ---- */
@@ -46,7 +54,7 @@
 .fm.salah input,.fm.salah textarea,.fm.salah .foto-area{border-color:var(--merah)}
 .fm .galat-teks{display:none;color:var(--merah);font-size:12px;font-weight:600;margin-top:6px}
 .fm.salah .galat-teks{display:block}
-.foto-area{width:100%;display:grid;justify-items:center;gap:6px;padding:26px 12px;border:2px dashed #CBD5E1;border-radius:12px;background:#F8FAFC;color:var(--abu);cursor:pointer;font:inherit}
+.foto-area{width:100%;display:grid;justify-items:center;gap:6px;padding:30px 12px;border:2px dashed #93C5FD;border-radius:16px;background:#F5F9FF;color:var(--abu);cursor:pointer;font:inherit}
 .foto-area:hover{border-color:var(--biru);background:var(--panel)}
 .foto-area svg.i{width:30px;height:30px}
 .foto-area b{color:var(--teks)}
@@ -59,11 +67,12 @@
 
 /* ---- Ringkasan perjalanan selesai ---- */
 .sukses{display:grid;justify-items:center;text-align:center;gap:6px;padding:6px 0 16px}
-.sukses .centang{width:56px;height:56px;border-radius:50%;background:#DCFCE7;color:var(--hijau);display:grid;place-items:center;margin-bottom:6px}
+.sukses .centang{width:64px;height:64px;border-radius:50%;background:#DCFCE7;color:var(--hijau);display:grid;place-items:center;margin-bottom:6px;box-shadow:0 0 0 8px #F0FDF4;animation:pop .4s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 .sukses .centang svg.i{width:28px;height:28px;stroke-width:2.5}
 .sukses h4{font-size:18px}.sukses p{color:var(--abu)}
 .mdl-stat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.mdl-stat div{background:var(--bg);border-radius:12px;padding:12px 14px}
+.mdl-stat div{background:#F8FAFC;border:1px solid var(--garis);border-radius:14px;padding:14px 16px}
 .mdl-stat b{font-size:20px;display:block}
 .mdl-stat small{color:var(--abu);font-size:11px;font-weight:600;text-transform:uppercase}
 
@@ -72,14 +81,15 @@
 .mdl-filter label{display:block;font-weight:700;font-size:12px;margin-bottom:4px}
 .mdl-filter select{width:100%;border:1.5px solid var(--garis);border-radius:10px;padding:10px 12px;font:inherit;background:#fff;color:var(--teks)}
 .mdl-ikhtisar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
-.mdl-ikhtisar div{background:var(--panel);border-radius:12px;padding:12px 14px}
+.mdl-ikhtisar div{background:var(--panel);border-radius:14px;padding:14px 16px}
 .mdl-ikhtisar div.utama{background:var(--kuning)}
 .mdl-ikhtisar small{display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--abu)}
 .mdl-ikhtisar div.utama small{color:var(--teks)}
 .mdl-ikhtisar b{font-size:22px}
 .mdl-ikhtisar em{font-style:normal;font-size:12px;color:var(--abu);font-weight:600;margin-left:4px}
-.mdl-daftar{display:grid;gap:8px;max-height:280px;overflow-y:auto}
-.mdl-daftar .t{display:flex;gap:12px;justify-content:space-between;align-items:center;border:1px solid var(--garis);border-radius:12px;padding:10px 12px}
+.mdl-daftar{display:grid;gap:8px;max-height:280px;overflow-y:auto;grid-template-columns:minmax(0,1fr)}
+.mdl-daftar .t{display:flex;gap:12px;justify-content:space-between;align-items:center;border:1px solid var(--garis);border-radius:14px;padding:12px 14px;transition:.15s}
+.mdl-daftar .t:hover{border-color:#93C5FD;background:#F8FBFF}
 .mdl-daftar .t b{display:block}
 .mdl-daftar .t small{color:var(--abu)}
 .mdl-daftar .t .km{text-align:right;white-space:nowrap;font-weight:700}

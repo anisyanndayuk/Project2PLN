@@ -1,0 +1,86 @@
+<script>
+// ==========================================
+// Rating Saya: skor rata-rata, sebaran bintang, dan daftar ulasan milik driver yang login.
+// Data dari server: driverRating(sid), cache 'rating'. Klik baris sebaran atau tombol bintang untuk menyaring ulasan.
+// Halaman ini hanya membaca; rating diisi pemohon (di luar fitur Driver).
+// ==========================================
+(function () {
+  const R = $('#h-rating'), q = s => $(s, R);
+  const PER_HALAMAN = 10;                  // ulasan yang ditampilkan sekaligus; sisanya lewat tombol "Tampilkan lainnya"
+  let data = null, saring = 0, banyak = PER_HALAMAN;   // saring: 0 = semua, 1-5 = hanya bintang itu
+
+  const bintang = n => '<div class="rt-bintang" aria-label="' + n + ' dari 5 bintang">' +
+    [1, 2, 3, 4, 5].map(i => '<span class="' + (i <= Math.round(n) ? 'on' : '') + '">★</span>').join('') + '</div>';
+
+  function atas() {
+    const d = data, rata = d.rata, tertinggi = Math.max(1, d.sebaran[5], d.sebaran[4], d.sebaran[3], d.sebaran[2], d.sebaran[1]);
+    q('#rt-atas').innerHTML = !d.jumlah ? '' :
+      '<div class="rt-hero"><div class="rt-skor"><div class="angka">' + rata.toFixed(1) + '<small> / 5</small></div>' + bintang(rata) +
+        '<p>dari ' + angka(d.jumlah) + ' penilaian' + (d.jumlahUlasan ? ' · ' + angka(d.jumlahUlasan) + ' ulasan tertulis' : '') + '</p></div>' +
+      '<div class="rt-sebaran">' + [5, 4, 3, 2, 1].map(n =>
+        '<button type="button" class="rt-baris' + (saring === n ? ' aktif' : '') + '" data-bintang="' + n + '" aria-label="Tampilkan rating ' + n + ' bintang">' +
+          '<b>' + n + '<i>★</i></b><div class="rt-batang"><i style="width:' + Math.round(d.sebaran[n] / tertinggi * 100) + '%"></i></div><span>' + d.sebaran[n] + '</span></button>').join('') +
+      '</div></div>';
+  }
+
+  function ulasan(t, n) {
+    return '<article class="rt-ulasan" style="animation-delay:' + Math.min(n, 8) * 30 + 'ms">' +
+      '<div class="rt-atas">' + bintang(t.nilai) + (t.tanggal ? '<span class="rt-tgl">' + esc(tglPanjang(t.tanggal)) + '</span>' : '') + '</div>' +
+      (t.ulasan ? '<p class="rt-teks">' + esc(t.ulasan) + '</p>' : '<p class="rt-teks tanpa">Tidak ada ulasan tertulis.</p>') +
+      ((t.pemohon || t.tujuan) ? '<div class="rt-chip">' + (t.pemohon ? '<span>' + ikon('user') + esc(t.pemohon) + '</span>' : '') +
+        (t.tujuan ? '<span>' + ikon('route') + esc(t.tujuan) + '</span>' : '') + '</div>' : '') + '</article>';
+  }
+
+  function render() {
+    q('#rt-segarkan').classList.remove('putar');
+    const d = data, isi = q('#rt-isi');
+    q('#rt-sub').textContent = d.jumlah ? 'Penilaian dari pemohon setelah perjalanan selesai.' : 'Rating akan muncul setelah pemohon menilai perjalanan Anda.';
+    atas();
+    if (!d.profilDriverAda) {
+      isi.innerHTML = '<div class="rt-kosong">' + ikon('car') + '<b>Data driver belum tersedia</b>Hubungi admin untuk mendaftarkan akun Anda.</div>'; return;
+    }
+    if (!d.jumlah) {
+      isi.innerHTML = '<div class="rt-kosong">' + ikon('star') + '<b>Belum ada rating</b>Setelah perjalanan selesai, pemohon dapat memberi nilai dan ulasan. Semuanya akan tampil di sini.</div>'; return;
+    }
+    const daftar = saring ? d.daftar.filter(t => t.nilai === saring) : d.daftar;
+    const tampil = daftar.slice(0, banyak);
+    const chip = [0, 5, 4, 3, 2, 1].map(n => '<button type="button" class="' + (saring === n ? 'aktif' : '') + '" data-saring="' + n + '">' +
+      (n ? n + ' ★ (' + d.sebaran[n] + ')' : 'Semua (' + d.jumlah + ')') + '</button>').join('');
+    isi.innerHTML = '<div class="rt-saring">' + chip + '</div>' +
+      (tampil.length ? tampil.map(ulasan).join('') : '<div class="rt-kosong">' + ikon('star') + '<b>Tidak ada rating ' + saring + ' bintang</b><button type="button" class="btn sekunder" data-saring="0" style="margin-top:10px">Lihat semua</button></div>') +
+      (daftar.length > tampil.length ? '<button type="button" class="btn sekunder rt-lagi" data-lagi="1">Tampilkan ' + (daftar.length - tampil.length) + ' lainnya</button>' : '') +
+      (d.terpotong ? '<p style="color:var(--abu);text-align:center">Hanya ulasan terbaru yang ditampilkan.</p>' : '');
+  }
+
+  function galat(pesan, kode) {
+    q('#rt-segarkan').classList.remove('putar');
+    if (data) { toast(pesan || 'Gagal memuat rating.'); return; }
+    q('#rt-atas').innerHTML = '';
+    q('#rt-isi').innerHTML = '<div class="rt-kosong">' + ikon('car') + '<b>Data belum dapat dimuat</b>' +
+      esc(kode === 'SESI' ? (pesan || 'Sesi berakhir. Silakan masuk lagi.') : (pesan || 'Periksa koneksi, lalu klik Segarkan.')) + '</div>';
+  }
+
+  function terima(d) {
+    if (!d || !d.ok) return galat(d && d.pesan, d && d.kode);
+    data = d; render();
+  }
+
+  async function muat() {
+    try { await ambil('rating', 'driverRating', 60000, terima); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  function init() {
+    q('#rt-segarkan').addEventListener('click', () => { q('#rt-segarkan').classList.add('putar'); delete App.cache.rating; muat(); });
+    R.addEventListener('click', e => {
+      if (!data) return;
+      const b = e.target.closest('[data-bintang]'), s = e.target.closest('[data-saring]');
+      if (b) { const n = Number(b.dataset.bintang); saring = saring === n ? 0 : n; banyak = PER_HALAMAN; render(); return; }   // klik lagi = batalkan penyaring
+      if (s) { saring = Number(s.dataset.saring); banyak = PER_HALAMAN; render(); return; }
+      if (e.target.closest('[data-lagi]')) { banyak += PER_HALAMAN; render(); }
+    });
+  }
+
+  App.daftar('rating', { init: init, tampil: muat });
+})();
+</script>

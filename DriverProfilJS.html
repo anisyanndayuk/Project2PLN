@@ -1,0 +1,191 @@
+<script>
+// ==========================================
+// Profil & Pengaturan: data akun driver, ubah No. HP, ubah password.
+// Server: driverProfil, driverUbahNoHp, driverUbahPassword (DriverProfilServer.gs). Cache 'profil' (2 menit).
+// Nama, username, email, jenis driver, status, dan SIM dikelola admin, jadi hanya tampil.
+// ==========================================
+(function () {
+  const R = $('#h-profil'), q = s => $(s, R);
+  let data = null;
+
+  function badgeSim(d) {
+    if (!d || d.simSisaHari == null) return ['abu', 'Belum tercatat'];
+    if (d.simSisaHari < 0) return ['merah', 'Kedaluwarsa'];
+    if (d.simSisaHari <= 30) return ['kuning', 'Sisa ' + d.simSisaHari + ' hari'];
+    return ['', 'Sisa ' + angka(d.simSisaHari) + ' hari'];
+  }
+
+  // Sisa masa SIM sebagai bar: penuh = 1 tahun atau lebih
+  function sisaBar(d) {
+    if (!d || d.simSisaHari == null) return '';
+    const n = d.simSisaHari, pct = Math.max(0, Math.min(100, Math.round(n / 365 * 100)));
+    return '<div class="pf-sisa"><div class="pf-sisa-bar"><i class="' + (n < 0 ? 'merah' : n <= 30 ? 'kuning' : '') + '" style="width:' + (n < 0 ? 100 : Math.max(pct, 4)) + '%"></i></div>' +
+      '<p>' + (n < 0 ? 'Sudah lewat ' + angka(-n) + ' hari dari masa berlaku' : n === 0 ? 'Berakhir hari ini' : 'Masih berlaku ' + angka(n) + ' hari lagi') + '</p></div>';
+  }
+
+  // Statistik ringkas di banner: dipinjam dari data Beranda bila sudah pernah dimuat (tanpa panggilan server tambahan)
+  function statBanner() {
+    const b = App.cache.beranda && App.cache.beranda.data;
+    if (!b || b.ok === false) return '';
+    return '<div class="pf-stat"><div><b>' + angka(b.total || 0) + '</b><small>Perjalanan</small></div>' +
+      '<div><b>' + angka(b.jarak || 0) + '</b><small>Total km</small></div>' +
+      '<div><b>' + (b.rating == null ? '-' : b.rating.toFixed(1) + ' ★') + '</b><small>Rating</small></div></div>';
+  }
+
+  const baris = (ik, warna, label, isi, aksi) =>
+    '<div class="pf-baris"><span class="pf-ik ' + warna + '">' + ikon(ik) + '</span><div><small>' + label + '</small><b' + (aksi ? ' id="pf-nohp"' : '') + '>' + isi + '</b></div>' +
+    (aksi ? '<button type="button" class="pf-ubah" data-aksi="nohp">' + ikon('pen') + 'Ubah</button>' : '<span></span>') + '</div>';
+
+  const campur = (id, label, auto, ekstra) =>
+    '<div class="pf-f" id="pf-f-' + id + '"><label for="pf-' + id + '">' + label + '</label>' +
+    '<div class="pf-input"><input type="password" id="pf-' + id + '" autocomplete="' + auto + '" maxlength="100" placeholder="••••••••">' + ikon('lock') +
+    '<button type="button" class="pf-mata" data-mata="' + id + '" aria-label="Tampilkan password" title="Tampilkan password">' + ikon('eye') + '</button></div>' +
+    (ekstra || '') + '<div class="pf-galat" id="pf-g-' + id + '"></div></div>';
+
+  function render() {
+    const p = data.profil, d = data.driver, pg = data.penugasan || {};
+    const [kls, teksSim] = badgeSim(d);
+    const infoTeks = !pg.bisa ? pg.alasan : pg.peringatan;
+
+    q('#pf-isi').innerHTML =
+      '<section class="pf-banner"><div class="pf-id"><div class="pf-avatar">' + esc((p.nama || '?').trim().charAt(0).toUpperCase()) + '</div>' +
+        '<div><h1>' + esc(p.nama) + '</h1><p>@' + esc(p.username || '-') + '</p><div class="pf-pil"><span>' + (d && d.jenis ? 'Driver ' + esc(d.jenis) : 'Driver') + '</span>' +
+        (d && d.status ? '<span class="' + (pg.bisa ? 'hidup' : 'mati') + '">' + esc(d.status) + '</span>' : '') + '<span>' + esc(p.id) + '</span></div></div></div>' +
+        statBanner() + '</section>' +
+
+      '<div class="pf-grid"><div class="pf-kolom">' +
+        '<section class="pf-kartu"><div class="pf-judul"><span class="pf-ik biru">' + ikon('user') + '</span><div><h3>Informasi akun</h3><small>Data yang dipakai untuk masuk dan dihubungi</small></div></div>' +
+          baris('user', 'biru', 'Username', esc(p.username || '-')) +
+          baris('mail', 'hijau', 'Email', esc(p.email || '-')) +
+          baris('idcard', 'ungu', 'ID Pengguna', esc(p.id)) +
+          baris('phone', 'kuning', 'No. HP', esc(p.noHp || 'Belum diisi'), true) +
+          '<div class="pf-catatan">' + ikon('shield') + '<span>Nama, username, dan email dikelola admin. Hubungi admin bila ada yang perlu diperbaiki.</span></div></section>' +
+
+        '<section class="pf-kartu"><div class="pf-judul"><span class="pf-ik kuning">' + ikon('car') + '</span><div><h3>SIM &amp; status penugasan</h3><small>Dicek admin sebelum penugasan</small></div></div>' +
+          (d ? '<div class="pf-sim"><div class="pf-sim-atas"><span>SURAT IZIN MENGEMUDI</span>' + ikon('bolt') + '</div>' +
+               '<small>Berlaku sampai</small><div class="tgl">' + (d.simBerlaku ? esc(tglPanjang(d.simBerlaku)) : 'Belum tercatat') + '</div>' +
+               '<div class="pf-sim-bawah"><span class="nama">' + esc(p.nama) + '</span><span class="pf-badge ' + kls + '">' + esc(teksSim) + '</span></div>' + sisaBar(d) + '</div>'
+             : '<div class="pf-kosong" style="padding:22px"><b>Belum terdaftar sebagai driver</b>Hubungi admin untuk mendaftarkan data driver Anda.</div>') +
+          (infoTeks ? '<div class="pf-info ' + (pg.bisa ? '' : 'galat') + '">' + ikon(pg.bisa ? 'clock' : 'flag') + '<span>' + esc(infoTeks) + '</span></div>' : '') + '</section>' +
+      '</div>' +
+
+      '<div class="pf-kolom"><section class="pf-kartu"><div class="pf-judul"><span class="pf-ik hijau">' + ikon('shield') + '</span><div><h3>Keamanan akun</h3><small>Ganti password secara berkala</small></div></div>' +
+        '<form class="pf-form" id="pf-form" novalidate autocomplete="off">' +
+          '<div class="pf-umum" id="pf-umum" role="alert"></div>' +
+          campur('lama', 'Password saat ini', 'current-password') +
+          campur('baru', 'Password baru', 'new-password',
+            '<div class="pf-meter"><div class="pf-meter-bar" id="pf-meter"><i></i><i></i><i></i><i></i></div>' +
+            '<div class="pf-meter-teks"><span>Kekuatan: <b id="pf-kuat">-</b></span></div>' +
+            '<div class="pf-syarat"><span id="pf-s-8">' + ikon('check') + 'Minimal 8 karakter</span><span id="pf-s-hd">' + ikon('check') + 'Huruf &amp; angka</span><span id="pf-s-cocok">' + ikon('check') + 'Password cocok</span></div></div>') +
+          campur('ulang', 'Ulangi password baru', 'new-password') +
+          '<button type="submit" class="btn utama" id="pf-simpan">' + ikon('lock') + 'Simpan password</button></form></section></div></div>';
+  }
+
+  // Meter kekuatan + syarat, diperbarui saat mengetik (tidak menggambar ulang halaman)
+  function perbaruiMeter() {
+    if (!q('#pf-meter')) return;
+    const baru = q('#pf-baru').value, ulang = q('#pf-ulang').value;
+    const huruf = /[A-Za-z]/.test(baru), angkaAda = /\d/.test(baru);
+    const skor = !baru ? 0 : Math.min(4, (baru.length >= 8 ? 1 : 0) + (baru.length >= 12 ? 1 : 0) + (huruf && angkaAda ? 1 : 0) + (/[^A-Za-z0-9]/.test(baru) || (/[a-z]/.test(baru) && /[A-Z]/.test(baru)) ? 1 : 0));
+    q('#pf-meter').className = 'pf-meter-bar' + (skor ? ' s' + skor : '');
+    q('#pf-kuat').textContent = !baru ? '-' : baru.length < 8 ? 'Terlalu pendek' : ['Lemah', 'Cukup', 'Baik', 'Kuat'][Math.max(0, skor - 1)];
+    q('#pf-s-8').classList.toggle('ok', baru.length >= 8);
+    q('#pf-s-hd').classList.toggle('ok', huruf && angkaAda);
+    q('#pf-s-cocok').classList.toggle('ok', !!baru && baru === ulang);
+  }
+
+  const salah = (id, pesan) => { const f = q('#pf-f-' + id); f.classList.toggle('salah', !!pesan); q('#pf-g-' + id).textContent = pesan || ''; };
+  const umum = pesan => { const u = q('#pf-umum'); u.textContent = pesan || ''; u.classList.toggle('tampil', !!pesan); };
+
+  // ---------- Ubah password ----------
+  async function simpanPassword(e) {
+    e.preventDefault();
+    const lama = q('#pf-lama').value, baru = q('#pf-baru').value, ulang = q('#pf-ulang').value;
+    umum(''); ['lama', 'baru', 'ulang'].forEach(k => salah(k, ''));
+    let ok = true;
+    if (!lama) { salah('lama', 'Password saat ini wajib diisi.'); ok = false; }
+    if (baru.length < 8) { salah('baru', 'Password baru minimal 8 karakter.'); ok = false; }
+    else if (baru === lama) { salah('baru', 'Password baru harus berbeda dari password saat ini.'); ok = false; }
+    if (ulang !== baru) { salah('ulang', 'Password tidak sama.'); ok = false; }
+    if (!ok) return;
+
+    const tb = q('#pf-simpan'); tb.disabled = true; tb.textContent = 'Menyimpan...';
+    try {
+      const r = await panggil('driverUbahPassword', lama, baru);
+      if (r && r.ok) {
+        q('#pf-form').reset(); perbaruiMeter(); toast('Password berhasil diubah.');
+      } else if (r && r.kode === 'SESI') umum(r.pesan);
+      else if (r && /saat ini salah|Terlalu banyak|wajib/i.test(r.pesan || '')) salah('lama', r.pesan);
+      else umum((r && r.pesan) || 'Password gagal diubah.');
+    } catch (err) { umum((err && err.message) || 'Tidak dapat terhubung ke server.'); }
+    tb.disabled = false; tb.textContent = 'Simpan password';
+  }
+
+  // ---------- Ubah No. HP (modal) ----------
+  function ubahNoHp() {
+    const html =
+      '<div class="pf-f" id="pf-f-hp"><label for="pf-hp">No. HP baru</label>' +
+      '<div class="pf-input"><input type="text" id="pf-hp" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Contoh: 081234567890" style="padding:13px 14px" value="' + esc(data.profil.noHp || '') + '"></div>' +
+      '<div class="pf-petunjuk">Format 08... atau +62 8... Nomor ini dipakai pemohon dan admin untuk menghubungi Anda.</div><div class="pf-galat" id="pf-g-hp"></div></div>';
+    Modal.buka('Ubah No. HP', '', html, [
+      { teks: 'Batal', klik: Modal.tutup },
+      { teks: 'Simpan', kelas: 'utama', id: 'pf-simpan-hp', klik: simpanNoHp }
+    ]);
+    setTimeout(() => { const i = $('#pf-hp'); if (i) { i.focus(); i.select(); } }, 60);
+    const i = $('#pf-hp'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); simpanNoHp(); } });
+  }
+
+  async function simpanNoHp() {
+    const nilai = ($('#pf-hp').value || '').trim().replace(/[\s-]/g, '').replace(/^\+?62/, '0');
+    const f = $('#pf-f-hp'), g = $('#pf-g-hp'), tb = $('#pf-simpan-hp');
+    const gagal = pesan => { f.classList.add('salah'); g.textContent = pesan; };
+    f.classList.remove('salah');
+    if (!/^0\d{8,13}$/.test(nilai)) return gagal('No. HP tidak valid. Contoh: 081234567890');
+    tb.disabled = true; tb.textContent = 'Menyimpan...';
+    try {
+      const r = await panggil('driverUbahNoHp', nilai);
+      if (r && r.ok) {
+        data.profil.noHp = r.noHp; if (App.cache.profil) App.cache.profil.data = data;   // cache ikut diperbarui
+        Modal.tutup(); render(); toast('No. HP diperbarui.');
+        return;
+      }
+      gagal((r && r.pesan) || 'No. HP gagal disimpan.');
+    } catch (err) { gagal((err && err.message) || 'Tidak dapat terhubung ke server.'); }
+    tb.disabled = false; tb.textContent = 'Simpan';
+  }
+
+  // ---------- Muat data ----------
+  function galat(pesan, kode) {
+    if (data) { toast(pesan || 'Gagal memuat profil.'); return; }
+    q('#pf-isi').innerHTML = '<div class="pf-kosong"><b>Data belum dapat dimuat</b>' +
+      esc(kode === 'SESI' ? (pesan || 'Sesi berakhir. Silakan masuk lagi.') : (pesan || 'Periksa koneksi, lalu buka halaman ini lagi.')) + '</div>';
+  }
+  function terima(d) {
+    if (!d || !d.ok) return galat(d && d.pesan, d && d.kode);
+    const aktif = document.activeElement && R.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
+    data = d;
+    if (!aktif) render();   // jangan menggambar ulang saat driver sedang mengetik password
+  }
+  async function muat() {
+    try { await ambil('profil', 'driverProfil', 120000, terima); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  function init() {
+    R.addEventListener('submit', e => { if (e.target.id === 'pf-form') simpanPassword(e); });
+    R.addEventListener('input', e => { if (e.target.id === 'pf-baru' || e.target.id === 'pf-ulang') perbaruiMeter(); });
+    R.addEventListener('click', e => {
+      const m = e.target.closest('[data-mata]');
+      if (m) {
+        const i = q('#pf-' + m.dataset.mata), tampil = i.type === 'password';
+        i.type = tampil ? 'text' : 'password'; m.classList.toggle('on', tampil);
+        const t = tampil ? 'Sembunyikan password' : 'Tampilkan password'; m.setAttribute('aria-label', t); m.title = t;
+        return;
+      }
+      if (e.target.closest('[data-aksi="nohp"]') && data && typeof Modal !== 'undefined') ubahNoHp();
+    });
+  }
+
+  App.daftar('profil', { init: init, tampil: muat });
+})();
+</script>

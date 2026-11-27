@@ -1,0 +1,252 @@
+<script>
+var BS = { semua: [], filter: 'Semua', cari: '', hal: 1, per: 6, aktif: null };
+var BS_TAB = ['Semua', 'Diajukan', 'Disetujui', 'Berjalan', 'Ditolak', 'Selesai', 'Dibatalkan'];
+var BS_BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function bsEl(id) { return document.getElementById(id); }
+function bsEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function bsTgl(t) {
+  if (!t) return '-';
+  var p = t.split('-');
+  return Number(p[2]) + ' ' + BS_BLN[Number(p[1]) - 1] + ' ' + p[0];
+}
+function bsTglJam(s) {
+  if (!s) return '-';
+  var a = s.split(' ');
+  return bsTgl(a[0]) + (a[1] ? ', ' + a[1] + ' WIB' : '');
+}
+function bsBadge(st) { return '<span class="bs-st bs-st-' + st.toLowerCase() + '">' + bsEsc(st) + '</span>'; }
+
+function bsSubJudul(st) {
+  return {
+    Diajukan: 'Pengajuan menunggu persetujuan admin',
+    Disetujui: 'Pengajuan disetujui, armada dan driver sudah ditetapkan',
+    Berjalan: 'Perjalanan sedang berlangsung',
+    Selesai: 'Perjalanan sudah selesai',
+    Ditolak: 'Pengajuan tidak dapat diproses oleh admin',
+    Dibatalkan: 'Pengajuan dibatalkan oleh pemohon'
+  }[st] || '';
+}
+
+// ---------- Daftar ----------
+function bsRender() {
+  var cari = BS.cari.toLowerCase();
+
+  // Chip filter + jumlah
+  var hitung = {};
+  BS.semua.forEach(function (b) { hitung[b.status] = (hitung[b.status] || 0) + 1; });
+  bsEl('bsTab').innerHTML = BS_TAB.map(function (t) {
+    var n = t === 'Semua' ? BS.semua.length : (hitung[t] || 0);
+    return '<button type="button" class="bs-chip' + (BS.filter === t ? ' on' : '') + '" data-tab="' + t + '">' + t + '<b>' + n + '</b></button>';
+  }).join('');
+
+  var daftar = BS.semua.filter(function (b) {
+    if (BS.filter !== 'Semua' && b.status !== BS.filter) return false;
+    if (cari) {
+      var gabung = [b.tujuan, b.keperluan, b.mobil ? b.mobil.nama + ' ' + b.mobil.plat : '', b.driver ? b.driver.nama : ''].join(' ').toLowerCase();
+      if (gabung.indexOf(cari) === -1) return false;
+    }
+    return true;
+  });
+
+  var totalHal = Math.max(1, Math.ceil(daftar.length / BS.per));
+  if (BS.hal > totalHal) BS.hal = totalHal;
+  var mulai = (BS.hal - 1) * BS.per;
+  var tampil = daftar.slice(mulai, mulai + BS.per);
+
+  bsEl('bsBody').innerHTML = tampil.length ? tampil.map(function (b) {
+  return '<tr data-id="' + bsEsc(b.id) + '">' +
+      '<td><b>' + bsTgl(b.tanggal) + '</b><div class="bs-kecil">' + bsEsc(b.jamBerangkat) + ' - ' + bsEsc(b.jamTiba) + ' WIB</div></td>' +
+      '<td><b>' + bsEsc(b.tujuan) + '</b><div class="bs-kecil">' + bsEsc(b.keperluan) + '</div></td>' +
+      '<td>' + (b.mobil ? bsEsc(b.mobil.nama) + '<span class="bs-plat">' + bsEsc(b.mobil.plat) + '</span>' : '<span class="bs-kosong">Menunggu alokasi</span>') + '</td>' +
+      '<td>' + (b.driver ? bsEsc(b.driver.nama) : '<span class="bs-kosong">Menunggu penugasan</span>') + '</td>' +
+      '<td>' + bsBadge(b.status) + '</td>' +
+      '<td><button type="button" class="bs-lihat"><i class="far fa-eye"></i> Lihat Detail Booking</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Belum ada booking.</td></tr>';
+
+  var awal = daftar.length ? mulai + 1 : 0;
+  bsEl('bsInfo').textContent = 'Menampilkan ' + awal + '-' + (mulai + tampil.length) + ' dari ' + daftar.length + ' pengajuan';
+
+  var h = '<button type="button" data-hal="' + (BS.hal - 1) + '"' + (BS.hal === 1 ? ' disabled' : '') + '>Sebelumnya</button>';
+  for (var i = 1; i <= totalHal; i++) {
+    h += '<button type="button" data-hal="' + i + '"' + (i === BS.hal ? ' class="on"' : '') + '>' + i + '</button>';
+  }
+  h += '<button type="button" data-hal="' + (BS.hal + 1) + '"' + (BS.hal === totalHal ? ' disabled' : '') + '>Berikutnya</button>';
+  bsEl('bsHal').innerHTML = h;
+}
+
+function bsMuat() {
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (!bsEl('bsBody')) return;
+      if (!r || r.status !== 'success') {
+        bsEl('bsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#b91c1c;padding:32px">' + bsEsc((r && r.message) || 'Gagal memuat data.') + '</td></tr>';
+        return;
+      }
+      BS.semua = r.booking || [];
+      bsRender();
+    })
+    .withFailureHandler(function () {
+      if (!bsEl('bsBody')) return;
+      bsEl('bsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#b91c1c;padding:32px">Koneksi terputus. Muat ulang halaman.</td></tr>';
+    })
+    .getBerandaPemohon(SID);
+}
+
+// ---------- Detail (modal di tengah) ----------
+function bsLangkah(b) {
+  var st = b.status;
+  if (st === 'Ditolak' || st === 'Dibatalkan') {
+    return [
+      { n: 'Diajukan', s: 'ok', t: b.waktuPengajuan },
+      { n: st === 'Ditolak' ? 'Ditolak admin' : 'Dibatalkan pemohon', s: 'bad', t: st === 'Ditolak' ? b.waktuKeputusan : '' }
+    ];
+  }
+  var urut = ['Diajukan', 'Disetujui', 'Berjalan', 'Selesai'];
+  var idx = urut.indexOf(st);
+  return urut.map(function (n, i) {
+    var s = (i < idx || st === 'Selesai') ? 'ok' : (i === idx ? 'now' : 'next');
+    return { n: n, s: s, t: i === 0 ? b.waktuPengajuan : (i === 1 ? b.waktuKeputusan : '') };
+  });
+}
+
+function bsDetail(id) {
+  var b = BS.semua.filter(function (x) { return x.id === id; })[0];
+  if (!b) return;
+  BS.aktif = b;
+
+  bsEl('bsMJudul').innerHTML = 'Detail Booking <span class="bs-kode">' + bsEsc(b.id) + '</span> ' + bsBadge(b.status);
+  bsEl('bsMSub').textContent = bsSubJudul(b.status);
+
+  var h = '';
+  if (b.status === 'Ditolak') {
+    h += '<div class="bs-alert bs-alert-merah"><b>Alasan penolakan</b><p>' + bsEsc(b.alasanTolak || 'Admin tidak mencantumkan alasan.') + '</p></div>';
+  }
+  if (b.status === 'Dibatalkan') {
+    h += '<div class="bs-alert bs-alert-abu"><b>Alasan pembatalan</b><p>' + bsEsc(b.alasanBatal || 'Tidak ada alasan yang dicantumkan.') + '</p></div>';
+  }
+
+  h += '<div class="bs-bagian"><h4>Progres pengajuan</h4><ul class="bs-tl">' +
+    bsLangkah(b).map(function (l) {
+      return '<li class="' + l.s + '"><b>' + bsEsc(l.n) + '</b>' + (l.t ? bsEsc(bsTglJam(l.t)) : '') + '</li>';
+    }).join('') + '</ul></div>';
+
+  h += '<div class="bs-bagian"><h4>Detail perjalanan</h4><div class="bs-grid">' +
+    '<div class="lebar"><small>Tujuan</small><span>' + bsEsc(b.tujuan) + '</span></div>' +
+    '<div class="lebar"><small>Keperluan</small><span>' + bsEsc(b.keperluan) + '</span></div>' +
+    '<div><small>Tanggal berangkat</small><span>' + bsTgl(b.tanggal) + ', ' + bsEsc(b.jamBerangkat) + ' WIB</span></div>' +
+    '<div><small>Estimasi tiba</small><span>' + bsEsc(b.jamTiba) + ' WIB</span></div>' +
+    '<div><small>Jumlah penumpang</small><span>' + b.penumpang + ' orang</span></div>' +
+    '<div><small>Bagian pemohon</small><span>' + bsEsc(b.bagian || '-') + '</span></div>' +
+    '</div></div>';
+
+  if (b.mobil || b.driver) {
+    h += '<div class="bs-bagian"><h4>Kendaraan dan driver</h4>';
+    if (b.mobil) {
+      h += '<div class="bs-kendaraan"><div><b>' + bsEsc(b.mobil.nama) + '</b>' + (b.mobil.ket ? '<small>' + bsEsc(b.mobil.ket) + '</small>' : '') +
+        '</div><span class="bs-plat">' + bsEsc(b.mobil.plat) + '</span></div>';
+    }
+    if (b.driver) {
+      h += '<div class="bs-kendaraan"><div><b>' + bsEsc(b.driver.nama) + '</b><small>Driver</small></div>' +
+        (b.driver.noHp ? '<a class="bs-telp" href="tel:' + bsEsc(b.driver.noHp) + '" title="Telepon driver">&#9742;</a>' : '') + '</div>';
+    }
+    h += '</div>';
+  }
+  bsEl('bsMBody').innerHTML = h;
+
+  var f = '<button type="button" class="bs-btn" id="bsTutup">Tutup</button>';
+  if (b.status === 'Diajukan') f = '<button type="button" class="bs-btn bs-btn-merah-garis" id="bsBatalMulai">Batalkan Booking</button>' + f;
+  bsEl('bsMFoot').innerHTML = f;
+  bsEl('bsMBody').scrollTop = 0;
+  bsEl('bsModal').classList.add('on');
+}
+
+function bsTutup() { bsEl('bsModal').classList.remove('on'); BS.aktif = null; }
+
+function bsBatalMulai() {
+  var tombol = bsEl('bsBatalMulai');
+  if (tombol) tombol.style.display = 'none';
+  var box = document.createElement('div');
+  box.className = 'bs-batal-box';
+  box.innerHTML =
+    '<h4 style="margin:0 0 8px;font-size:11px;letter-spacing:.05em;color:#64748b;text-transform:uppercase">Alasan pembatalan (opsional)</h4>' +
+    '<textarea id="bsAlasan" maxlength="300" placeholder="Contoh: perjalanan ditunda"></textarea>' +
+    '<div class="aksi"><button type="button" class="bs-btn" id="bsBatalTidak">Tidak jadi</button>' +
+    '<button type="button" class="bs-btn bs-btn-merah" id="bsBatalYa">Ya, batalkan</button></div>';
+  bsEl('bsMBody').appendChild(box);
+  bsEl('bsMBody').scrollTop = bsEl('bsMBody').scrollHeight;
+  bsEl('bsAlasan').focus();
+
+  bsEl('bsBatalTidak').addEventListener('click', function () {
+    box.remove();
+    if (tombol) tombol.style.display = '';
+  });
+  bsEl('bsBatalYa').addEventListener('click', function () {
+    var ya = bsEl('bsBatalYa'), tidak = bsEl('bsBatalTidak'), id = BS.aktif.id;
+    var label = ya.textContent;
+    ya.disabled = true; tidak.disabled = true; ya.textContent = 'Membatalkan...';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.status === 'success') {
+          toast(r.message);
+          bsTutup();
+          bsMuat();
+          return;
+        }
+        ya.disabled = false; tidak.disabled = false; ya.textContent = label;
+        toast((r && r.message) || 'Gagal membatalkan.');
+      })
+      .withFailureHandler(function () {
+        ya.disabled = false; tidak.disabled = false; ya.textContent = label;
+        toast('Koneksi terputus. Coba lagi.');
+      })
+      .batalkanBooking(SID, id, bsEl('bsAlasan').value);
+  });
+}
+
+// Dipanggil loadView() setelah HTML Booking Saya masuk
+function initBookingSaya() {
+  if (!bsEl('bsBody')) return;
+
+  // Pindahkan modal ke <body> supaya selalu di tengah layar, dan buang sisa modal dari kunjungan sebelumnya
+  var modal = bsEl('bsModal');
+  document.querySelectorAll('body > .bs-overlay').forEach(function (m) { m.remove(); });
+  document.body.appendChild(modal);
+
+  BS = { semua: [], filter: 'Semua', cari: '', hal: 1, per: 6, aktif: null };
+
+  bsEl('bsBaru').addEventListener('click', function () { loadView('PemohonBuatBooking'); });
+
+  bsEl('bsTab').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-tab]');
+    if (!t) return;
+    BS.filter = t.getAttribute('data-tab'); BS.hal = 1; bsRender();
+  });
+  bsEl('bsCari').addEventListener('input', function () { BS.cari = this.value.trim(); BS.hal = 1; bsRender(); });
+  bsEl('bsHal').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-hal]');
+    if (!t || t.disabled) return;
+    BS.hal = Number(t.getAttribute('data-hal')); bsRender();
+  });
+  bsEl('bsBody').addEventListener('click', function (e) {
+    var tr = e.target.closest('tr[data-id]');
+    if (tr) bsDetail(tr.getAttribute('data-id'));
+  });
+
+  bsEl('bsTutupX').addEventListener('click', bsTutup);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) bsTutup();
+    if (e.target.id === 'bsTutup') bsTutup();
+    if (e.target.id === 'bsBatalMulai') bsBatalMulai();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && bsEl('bsModal') && bsEl('bsModal').classList.contains('on')) bsTutup();
+  });
+
+  bsMuat();
+}
+</script>

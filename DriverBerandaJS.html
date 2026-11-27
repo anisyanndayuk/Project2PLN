@@ -44,12 +44,15 @@
       (jalan ? '' : '<p class="cat">Tombol aktif pada hari keberangkatan</p>');
   }
 
+  const BULAN = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+  const blokTgl = t => t.tanggal ? '<div class="m-dt"><b>' + Number(t.tanggal.slice(8, 10)) + '</b><span>' + BULAN[Number(t.tanggal.slice(5, 7)) - 1] + '</span><small>' + esc(t.jam || '') + '</small></div>' : '<div class="m-dt"><b>-</b></div>';
+
   function daftarMendatang(d) {
     q('#m-jumlah').textContent = d.mendatang.length + ' tugas';
     q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map((t, i) =>
-      '<button class="m-item" data-aksi="detail" data-i="' + i + '"><div class="m-tgl"><span>' + esc(tglPendek(t.tanggal)) + ', ' + esc(t.jam) + ' WIB</span><span class="pill">Disetujui</span></div>' +
-      '<b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
-      '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span><span>' + esc(t.mobil) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></button>'
+      '<button class="m-item" data-aksi="detail" data-i="' + i + '">' + blokTgl(t) +
+      '<div class="m-isi"><b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
+      '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></div></button>'
     ).join('') : '<div class="kosong kecil">' + ikon('calendar') + '<p>Belum ada tugas mendatang.</p></div>';
     q('#m-semua').textContent = 'Lihat semua tugas (' + d.totalTugas + ')';
     q('#m-semua').dataset.hal = 'tugas';
@@ -71,15 +74,23 @@
     q('#b-status-teks').textContent = { ada: 'Ada ' + d.jumlahHariIni + ' tugas hari ini', bertugas: 'Sedang dalam perjalanan', kosong: 'Belum ada tugas hari ini' }[d.statusHariIni];
     R.querySelectorAll('#b-chips span').forEach(c => c.classList.toggle('on', c.dataset.k === d.statusHariIni));
 
-    q('#s-total').textContent = angka(d.total);
-    q('#s-total-ket').textContent = d.total ? 'Seluruh perjalanan. Klik untuk filter bulan dan tahun.' : 'Belum ada perjalanan selesai.';
-    q('#s-jarak').textContent = angka(d.jarak);
-    q('#s-rata').textContent = d.total ? 'Rata-rata ' + angka(d.rata) + ' KM / perjalanan' : 'Belum ada data jarak';
+    q('#s-total').textContent = angka(d.bulanIni || 0);
+    q('#s-total-ket').textContent = d.bulanIni ? 'Total ' + angka(d.total) + ' perjalanan' : (d.total ? 'Belum ada bulan ini' : 'Belum ada perjalanan');
+    q('#s-jarak').textContent = angka(d.jarakBulan || 0);
+    q('#s-rata').textContent = d.jarak ? 'Total ' + angka(d.jarak) + ' KM' : 'Belum ada data jarak';
+    // Kartu SIM: hijau aman, kuning <=30 hari, merah sudah lewat, abu belum tercatat
+    const n = d.simSisaHari, sk = n == null ? 'abu' : n < 0 ? 'merah' : n <= 30 ? 'kuning' : 'hijau';
+    q('#s-sim').textContent = n == null ? '-' : angka(Math.abs(n));
+    q('#s-sim-sat').textContent = n == null ? '' : n < 0 ? 'hari lewat' : n === 0 ? '' : 'hari lagi';
+    q('#s-sim-ket').className = 'pill-ket ' + sk;
+    q('#s-sim-ket').textContent = n == null ? 'Belum tercatat' : n < 0 ? 'SIM sudah kedaluwarsa' : n === 0 ? 'Berakhir hari ini' : n <= 30 ? 'Segera perpanjang' : 'Masih aman';
+    q('#s-sim-ikon').className = 'ikon ' + (sk === 'abu' ? 'kuning' : sk);
     q('#s-rating').textContent = d.rating == null ? '-' : d.rating.toFixed(1);
     q('#s-bintang').innerHTML = bintang(d.rating || 0);
-    q('#s-ulasan').textContent = d.ulasan ? 'dari ' + angka(d.ulasan) + ' ulasan penumpang' : 'Belum ada ulasan.';
+    q('#s-ulasan').textContent = d.ulasan ? angka(d.ulasan) + ' ulasan' : 'Belum ada ulasan';
 
     q('#b-tugas').innerHTML = kartuTugas(d);
+    q('#b-tugas').classList.toggle('berjalan', d.state === 'berjalan');
     daftarMendatang(d);
     jalankanTimer(d.state === 'berjalan' && d.saatIni ? d.saatIni.mulai : '');
   }
@@ -104,23 +115,7 @@
   }
 
   // Kartu statistik dijadikan tombol: Total perjalanan dan Total jarak membuka modal, Rating menuju halaman Rating Saya
-  function jadikanKartuKlik() {
-    const a = q('#s-total'), b = q('#s-jarak');
-    if (!a || !b) return;
-    let baris = a.parentElement;
-    while (baris && !baris.contains(b)) baris = baris.parentElement;   // induk bersama = baris kartu
-    if (!baris) return;
-    [['#s-total', 'total'], ['#s-jarak', 'jarak'], ['#s-rating', 'rating']].forEach(p => {
-      let k = q(p[0]);
-      while (k && k.parentElement !== baris) k = k.parentElement;
-      if (!k) return;
-      k.dataset.aksi = p[1]; k.setAttribute('role', 'button'); k.tabIndex = 0; k.style.cursor = 'pointer';
-      k.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); k.click(); } });
-    });
-  }
-
   function init() {
-    jadikanKartuKlik();
     R.addEventListener('click', e => {
       const a = e.target.closest('[data-aksi]');
       if (!a) return;

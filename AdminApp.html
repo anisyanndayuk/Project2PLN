@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booktrip PLN - Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     [1] CSS GLOBAL
+     Dipakai semua fitur admin. CSS khusus satu fitur ditaruh
+     di file fiturnya (contoh: AdminBeranda.html), bukan di sini.
+     ============================================================ -->
+<style>
+/* ---- 1.1 Variabel warna & reset ---- */
+:root{--kuning:#FFE600;--biru:#0B5F8A;--navy:#0A3D5C;--teks:#0F1B2D;--abu:#64748B;--garis:#E5E9F0;--bg:#F3F5F9;--panel:#EEF3FD;--merah:#DC2626;--hijau:#15803D}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--teks);font-size:14px;line-height:1.45}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:3px solid var(--biru);outline-offset:2px}
+
+/* ---- 1.2 Kerangka & SIDEBAR ---- */
+.app{display:flex;min-height:100vh}
+.sisi{width:232px;background:#fff;border-right:1px solid var(--garis);padding:18px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex:none;overflow-y:auto}
+.logo{display:flex;gap:10px;align-items:center;margin-bottom:22px}
+.logo i{width:36px;height:36px;border-radius:10px;background:var(--kuning);display:grid;place-items:center}
+.logo b{display:block;font-size:15px}.logo small{color:var(--biru);font-size:11px}
+.menu{display:flex;flex-direction:column;gap:4px;flex:1}
+.menu small{color:var(--abu);font-size:10px;margin:0 10px 6px}
+.menu a{display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:10px;font-weight:600;cursor:pointer;user-select:none}
+.menu a:hover{background:var(--bg)}
+.menu a.aktif{background:var(--kuning);font-weight:800}
+.keluar{flex:none;margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:center;padding:12px;border:0;border-radius:10px;background:#FEE2E2;color:var(--merah);font-weight:700;cursor:pointer}
+
+/* ---- 1.3 NAVBAR (header atas) & area konten ---- */
+.utama{flex:1;min-width:0}
+.atas{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 28px;background:#fff;border-bottom:1px solid var(--garis)}
+.judul b{font-size:16px;display:flex;gap:8px;align-items:center}
+.judul small{color:var(--abu);font-size:12px}
+.kanan{display:flex;gap:12px;align-items:center}
+.chip-tgl{display:flex;gap:6px;align-items:center;background:var(--panel);color:var(--biru);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600}
+.lonceng{width:36px;height:36px;border-radius:10px;background:var(--bg);display:grid;place-items:center}
+.akun{display:flex;gap:10px;align-items:center;text-align:right}
+.akun small{display:block;color:var(--abu);font-size:11px}
+.akun i{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:700}
+main{padding:24px 28px}
+.hamburger{display:none;border:0;background:var(--bg);width:38px;height:38px;border-radius:10px;cursor:pointer;place-items:center}
+
+/* ---- 1.4 Komponen umum (pill, plat, kartu, tombol, kondisi kosong, info) ---- */
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#DBEAFE;color:#1D4ED8;white-space:nowrap}
+.pill.jalan{background:#DCFCE7;color:var(--hijau)}
+.pill.kantor{background:var(--panel);color:var(--biru)}
+.plat{background:#1E293B;color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.kartu{background:#fff;border:1px solid var(--garis);border-radius:16px;padding:18px}
+.btn{border:0;border-radius:10px;padding:13px 18px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center}
+.btn.utama{background:var(--kuning);color:var(--teks)}
+.btn.sekunder{background:var(--panel);color:var(--biru)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.kosong{display:grid;justify-items:center;gap:6px;text-align:center;color:var(--abu);padding:36px 12px}
+.kosong svg.i{width:36px;height:36px;stroke-width:1.5}
+.kosong b{color:var(--teks);font-size:15px}
+.kosong.kecil{padding:20px 8px}
+.info{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#FEF9C3;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px;margin-bottom:16px}
+.info.galat{background:#FEE2E2;border-color:#FECACA}
+
+/* Modal konfirmasi (dipakai fungsi konfirmasi()) */
+.modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(15,27,45,.45);animation:mdl-masuk .2s ease-out}
+.modal .kotak{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(15,27,45,.25);animation:kotak-masuk .25s cubic-bezier(.2,.9,.3,1.1)}
+.modal.tutup{animation:mdl-keluar .16s ease-in forwards}
+.modal.tutup .kotak{animation:kotak-keluar .16s ease-in forwards}
+@keyframes mdl-masuk{from{opacity:0}to{opacity:1}}
+@keyframes mdl-keluar{from{opacity:1}to{opacity:0}}
+@keyframes kotak-masuk{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes kotak-keluar{from{opacity:1;transform:none}to{opacity:0;transform:translateY(8px) scale(.97)}}
+.modal h3{font-size:17px;margin-bottom:6px}
+.modal p{color:var(--abu);margin-bottom:20px}
+.modal .aksi-m{display:flex;gap:10px;justify-content:flex-end}
+.btn.bahaya{background:var(--merah);color:#fff}
+
+/* ---- 1.5 Toast (pesan singkat di bawah layar) ---- */
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#0F1B2D;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.25s;z-index:50}
+#toast.tampil{opacity:1;transform:translate(-50%,0)}
+
+/* ---- 1.6 Responsif (layar kecil: sidebar jadi menu hamburger) ---- */
+@media (max-width:900px){
+  .sisi{position:fixed;z-index:40;left:0;top:0;transform:translateX(-100%);transition:transform .25s}
+  .sisi.buka{transform:none;box-shadow:0 0 0 100vmax rgba(15,27,45,.4)}
+  .hamburger{display:grid}
+  .judul small,.akun div{display:none}
+  .atas{padding:12px 16px}main{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     [2] KUMPULAN IKON SVG
+     Dipanggil dengan: <svg class="i"><use href="#nama"/></svg>
+     Ikon baru: tambah satu <symbol id="..."> di bawah ini.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></symbol>
+    <symbol id="list" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></symbol>
+    <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+    <symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/><path d="M17 5a3.5 3.5 0 0 1 0 7M18 14.8c2.4.6 4 2.2 4 5.2"/></symbol>
+    <symbol id="logout" viewBox="0 0 24 24"><path d="M9 4H5v16h4"/><path d="M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/></symbol>
+    <symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="car" viewBox="0 0 24 24"><path d="M5 16V11l2-5h10l2 5v5H5z"/><circle cx="8" cy="17" r="1.5"/><circle cx="16" cy="17" r="1.5"/></symbol>
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+    <symbol id="chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="sliders" viewBox="0 0 24 24"><path d="M4 6h8M20 6h-2M4 12h2M14 12h6M4 18h10M20 18h-2"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+    <symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></symbol>
+    <symbol id="map" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></symbol>
+    <symbol id="idcard" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5M14 10h4M14 14h4"/></symbol>
+    <symbol id="layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================
+     [3] KERANGKA HALAMAN: SIDEBAR + NAVBAR + AREA KONTEN
+     ============================================================ -->
+<div class="app">
+
+  <!-- ---------- [3a] SIDEBAR ---------- -->
+  <aside class="sisi" id="sisi">
+    <!-- Logo & nama aplikasi -->
+    <div class="logo">
+      <i><svg class="i"><use href="#bolt"/></svg></i>
+      <div><b>BOOKTRIP PLN</b><small>Peminjaman Mobil Dinas</small></div>
+    </div>
+
+    <!-- Daftar menu. Atribut data-hal harus SAMA dengan nama fitur di App.daftar() dan id section h-NAMA.
+         Fitur baru: tambah satu baris <a data-hal="..."> di sini. -->
+    <nav class="menu">
+      <small>MENU ADMIN</small>
+      <a data-hal="beranda" class="aktif"><svg class="i"><use href="#home"/></svg>Beranda</a>
+      <a data-hal="mobildriver"><svg class="i"><use href="#car"/></svg>Data Mobil dan Driver</a>
+      <a data-hal="rekap"><svg class="i"><use href="#list"/></svg>Rekap / Laporan</a>
+      <a data-hal="pengguna"><svg class="i"><use href="#users"/></svg>Pengguna</a>
+    </nav>
+
+    <!-- Tombol keluar (aksinya ada di [5f] JS inti) -->
+    <button class="keluar" id="keluar"><svg class="i"><use href="#logout"/></svg>Keluar</button>
+  </aside>
+
+  <div class="utama">
+
+    <!-- ---------- [3b] NAVBAR (header atas) ---------- -->
+    <header class="atas">
+      <!-- Tombol hamburger (hanya tampil di layar kecil) -->
+      <button class="hamburger" id="hamburger" aria-label="Buka menu"><svg class="i"><use href="#menu"/></svg></button>
+
+      <!-- Judul portal -->
+      <div class="judul">
+        <b>Portal Admin <span class="pill kantor">Booktrip PLN</span></b>
+        <small>Sistem Peminjaman Kendaraan Dinas - Pengelolaan Mobil, Driver &amp; Pengguna</small>
+      </div>
+
+      <!-- Sisi kanan: chip tanggal, lonceng, akun. #u-tgl, #u-nama, #u-avatar diisi oleh JS inti -->
+      <div class="kanan">
+        <span class="chip-tgl"><svg class="i"><use href="#calendar"/></svg><span id="u-tgl"></span></span>
+        <span class="lonceng" title="Notifikasi"><svg class="i"><use href="#bell"/></svg></span>
+        <div class="akun"><div><b id="u-nama"><?= user.nama ?></b><small>Admin</small></div><i id="u-avatar"><?= String(user.nama || "?").charAt(0).toUpperCase() ?></i></div>
+      </div>
+    </header>
+
+    <!-- ---------- [3c] AREA KONTEN: satu section per fitur ----------
+         Aturan: id section = "h-" + nama fitur (sama dengan data-hal di sidebar).
+         Fitur selain Beranda diberi atribut hidden. -->
+    <main>
+      <section id="h-beranda" class="halaman"><?!= includeAdmin_('AdminBeranda') ?></section>
+      <section id="h-mobildriver" class="halaman" hidden><?!= includeAdmin_('AdminMobilDriver') ?></section>
+      <section id="h-rekap" class="halaman" hidden><?!= includeAdmin_('AdminRekap') ?></section>
+      <section id="h-pengguna" class="halaman" hidden><?!= includeAdmin_('AdminPengguna') ?></section>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     [4] TOAST (elemen pesan singkat, dipakai fungsi toast())
+     ============================================================ -->
+<div id="toast" role="status"></div>
+
+<!-- Modal konfirmasi: diisi dan dibuka oleh fungsi konfirmasi() di JS inti -->
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-judul">
+  <div class="kotak">
+    <h3 id="modal-judul"></h3>
+    <p id="modal-teks"></p>
+    <div class="aksi-m">
+      <button type="button" class="btn sekunder" id="modal-batal">Batal</button>
+      <button type="button" class="btn bahaya" id="modal-ya"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     [5] JAVASCRIPT INTI
+     Dipakai semua fitur: sesi, helper, pemanggil server, router.
+     JS khusus satu fitur ada di file AdminNAMAJS.html.
+     ============================================================ -->
+
+<!-- [5a] Data sesi dari server (sid dan baseUrl dikirim oleh Kode.gs) -->
+<script>var SID = <?!= JSON.stringify(sid) ?>, BASE_URL = <?!= JSON.stringify(baseUrl) ?>;</script>
+<script>
+// ---- [5b] Konstanta, penampung data, dan fungsi bantu ----
+// PENTING: di level atas pakai var, JANGAN const/let. Halaman ini ditulis ke dokumen yang sama
+// dengan document.write (dari Auth.html), dan const/let yang namanya sudah ada (mis. $) akan
+// menggagalkan seluruh script dengan "Identifier ... has already been declared".
+var TZ = 'Asia/Jakarta';
+// true = alamat di browser diganti jadi ?page=dashboardAdmin setelah dashboard tampil.
+// Syaratnya doGet di Kode.gs sudah diubah. Kalau belum, set false.
+var UBAH_URL = true;
+var App = { cache: {}, halaman: {}, sekarang: null };
+App.daftar = (nama, hal) => { App.halaman[nama] = hal; }; // tiap fitur mendaftar: { init, tampil, tinggal }
+var $ = (s, r) => (r || document).querySelector(s);
+var esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+var angka = n => Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 });
+var ikon = n => '<svg class="i"><use href="#' + n + '"/></svg>';
+var fmtTgl = (iso, opsi) => new Date(iso + 'T12:00:00+07:00').toLocaleDateString('id-ID', Object.assign({ timeZone: TZ }, opsi));
+var tglPanjang = iso => fmtTgl(iso, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+var tglPendek = iso => fmtTgl(iso, { weekday: 'short', day: 'numeric', month: 'short' });
+
+function toast(teks) {
+  const t = $('#toast');
+  t.textContent = teks; t.classList.add('tampil');
+  clearTimeout(toast.w); toast.w = setTimeout(() => t.classList.remove('tampil'), 2400);
+}
+
+// Pop-up konfirmasi, hasilnya Promise true (ya) atau false (batal, Esc, klik di luar kotak).
+// Contoh: if (!(await konfirmasi('Hapus mobil?', 'Data tidak bisa dikembalikan.', 'Hapus'))) return;
+function konfirmasi(judul, teks, labelYa) {
+  return new Promise(selesai => {
+    const m = $('#modal'), ya = $('#modal-ya'), batal = $('#modal-batal');
+    $('#modal-judul').textContent = judul;
+    $('#modal-teks').textContent = teks;
+    ya.textContent = labelYa || 'Ya';
+    const tombol = e => { if (e.key === 'Escape') tutup(false); };
+    function tutup(hasil) {
+      ya.onclick = batal.onclick = m.onclick = null;
+      document.removeEventListener('keydown', tombol);
+      m.classList.add('tutup');                       // animasi keluar, lalu disembunyikan
+      setTimeout(() => {
+        if (m.classList.contains('tutup')) { m.hidden = true; m.classList.remove('tutup'); }
+      }, 160);
+      selesai(hasil);
+    }
+    ya.onclick = () => tutup(true);
+    batal.onclick = () => tutup(false);
+    m.onclick = e => { if (e.target === m) tutup(false); };
+    document.addEventListener('keydown', tombol);
+    m.classList.remove('tutup'); m.hidden = false; batal.focus();
+  });
+}
+
+// ---- [5c] Pemanggil fungsi server (Apps Script) ----
+// Panggil fungsi Apps Script sebagai Promise
+// SID (sesi login) selalu dikirim sebagai argumen pertama; server menentukan identitas dari sesi itu
+function panggil(fn) {
+  const arg = [SID].concat(Array.prototype.slice.call(arguments, 1));
+  return new Promise((ok, gagal) => {
+    const r = google.script.run.withSuccessHandler(ok).withFailureHandler(gagal);
+    r[fn].apply(r, arg);
+  });
+}
+
+// Tampilkan data cache dulu (instan), lalu segarkan di belakang layar bila sudah lewat ttl
+async function ambil(kunci, fn, ttl, saatData) {
+  const c = App.cache[kunci];
+  if (c) saatData(c.data);
+  if (!c || Date.now() - c.t > ttl) {
+    const data = await panggil(fn);
+    if (data && data.ok !== false) App.cache[kunci] = { data: data, t: Date.now() };
+    saatData(data);
+  }
+}
+
+// ---- [5d] Shell: pengisi data akun di navbar ----
+var Shell = {
+  isiHeader(p) {
+    $('#u-nama').textContent = p.nama;
+    $('#u-avatar').textContent = (p.nama || '?').trim().charAt(0).toUpperCase();
+  }
+};
+
+// ---- [5e] Router: pindah halaman tanpa memuat ulang ----
+var Router = {
+  pindah(nama) {
+    const hal = App.halaman[nama];
+    if (!hal) { toast('Fitur ini belum tersedia'); return; }
+    const lama = App.halaman[App.sekarang];
+    if (lama && lama.tinggal) lama.tinggal();
+    document.querySelectorAll('.halaman').forEach(e => e.hidden = e.id !== 'h-' + nama);
+    document.querySelectorAll('.menu a').forEach(a => a.classList.toggle('aktif', a.dataset.hal === nama));
+    $('#sisi').classList.remove('buka');
+    App.sekarang = nama;
+    if (!hal.siap) { hal.siap = true; if (hal.init) hal.init(); } // init: sekali saja, saat pertama dibuka
+    if (hal.tampil) hal.tampil();                                // tampil: setiap kali halaman dibuka
+  }
+};
+
+// ---- [5f] Event kerangka: klik menu, keluar, hamburger, tanggal navbar ----
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-hal]');
+  if (a) { e.preventDefault(); Router.pindah(a.dataset.hal); }
+});
+// Keluar: hapus sesi lalu ganti isi halaman dengan login (tanpa pindah URL, supaya tidak diblokir browser)
+$('#keluar').addEventListener('click', async () => {
+  if (!(await konfirmasi('Keluar dari akun?', 'Anda perlu masuk lagi untuk membuka Portal Admin.', 'Keluar'))) return;
+  const tombol = $('#keluar');
+  tombol.disabled = true;
+  try { sessionStorage.removeItem('sid'); } catch (e) {}
+  try { await panggil('logoutUser'); } catch (e) {}
+  if (UBAH_URL) { try { google.script.history.replace(null, { page: 'login' }); } catch (e) {} }
+  google.script.run
+    .withSuccessHandler(html => { document.open(); document.write(html); document.close(); })
+    .withFailureHandler(() => { tombol.disabled = false; toast('Gagal keluar. Coba lagi.'); })
+    .bukaLogin();
+});
+$('#hamburger').addEventListener('click', () => $('#sisi').classList.toggle('buka'));
+$('#u-tgl').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ });
+</script>
+
+<!-- ============================================================
+     [6] JAVASCRIPT TIAP FITUR
+     Harus di BAWAH JS inti [5] karena memakai App, panggil, dll.
+     Fitur baru: tambah satu baris include AdminNAMAJS di sini.
+     ============================================================ -->
+<?!= includeAdmin_('AdminBerandaJS') ?>
+<?!= includeAdmin_('AdminMobilDriverJS') ?>
+<?!= includeAdmin_('AdminRekapJS') ?>
+<?!= includeAdmin_('AdminPenggunaJS') ?>
+
+<!-- ============================================================
+     [7] HALAMAN PERTAMA YANG DIBUKA SETELAH LOGIN
+     ============================================================ -->
+<script>
+Router.pindah('beranda');
+// Ganti alamat di address bar tanpa memuat ulang halaman
+if (UBAH_URL) { try { google.script.history.replace(null, { page: 'dashboardAdmin' }); } catch (e) {} }
+</script>
+</body>
+</html>
