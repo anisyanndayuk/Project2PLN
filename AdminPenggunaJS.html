@@ -1,0 +1,195 @@
+<script>
+(function () {
+  const R = $('#h-pengguna'), q = s => $(s, R);
+  let data = null, tab = '', status = '', cari = '', hal = 1, form = null;
+  const BARIS = 8, PERAN = ['Pemohon', 'Driver', 'Admin'];
+  const TABS = [['', 'Semua', null], ['pemohon', 'Pemohon', 'pemohon'], ['driver', 'Driver', 'driver'], ['admin', 'Admin', 'admin']];
+
+  const inisial = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(k => k.charAt(0)).join('').toUpperCase() || '?';
+  const strip = v => v ? esc(v) : '<span class="pg-abu">-</span>';
+
+  async function kirim(fn) {
+    const r = await panggil.apply(null, arguments);
+    if (r && r.ok === false) { const e = new Error(r.pesan || 'Terjadi kesalahan.'); e.kode = r.kode; throw e; }
+    return r;
+  }
+
+  // ---------------- Muat & tampilkan ----------------
+  async function muat() {
+    if (!data) R.classList.add('memuat');
+    try { render(await kirim('adminGetPengguna')); }
+    catch (e) { galat(e && e.message, e && e.kode); }
+  }
+
+  function galat(pesan, kode) {
+    R.classList.remove('memuat');
+    const sesi = kode === 'SESI';
+    q('#pg-masuk').hidden = !sesi; q('#pg-ulang').hidden = sesi;
+    if (sesi) q('#pg-masuk').href = BASE_URL + '?page=login';
+    q('#pg-galat-teks').textContent = pesan || 'Tidak dapat terhubung ke server.';
+    q('#pg-galat').hidden = false;
+    if (!data) q('#pg-tbody').innerHTML = '<tr class="pg-kosong"><td colspan="6">Data belum dapat dimuat. Periksa koneksi, lalu coba lagi.</td></tr>';
+  }
+
+  function render(d) {
+    data = d;
+    R.classList.remove('memuat');
+    q('#pg-galat').hidden = true;
+    const s = d.stats;
+    q('#pg-s-total').textContent = angka(s.total);
+    q('#pg-s-pemohon').textContent = angka(s.pemohonAktif);
+    q('#pg-s-driver').textContent = angka(s.driverAktif);
+    q('#pg-h-pemohon').textContent = s.pemohon + ' Akun';
+    q('#pg-h-driver').textContent = s.driver + ' Akun';
+    q('#pg-h-admin').textContent = s.admin + ' Akun';
+    renderTabel();
+  }
+
+  function baris(x) {
+    const kontak = (x.email ? esc(x.email) : '') + (x.hp ? '<small>' + esc(x.hp) + '</small>' : '');
+    return '<tr><td><div class="pg-orang"><span class="pg-av ' + esc(x.kode) + '">' + esc(inisial(x.nama)) + '</span><div><b>' + esc(x.nama) + (x.saya ? ' (Anda)' : '') + '</b>' +
+        '<small>' + esc(x.id) + (x.nip ? ' &bull; NIP ' + esc(x.nip) : '') + '</small>' + '</div></div></td>' +
+      '<td><span class="pg-pill ' + esc(x.kode) + '">' + esc(x.peran) + '</span></td>' +
+      '<td class="pg-teks">' + strip(x.bagian) + '</td>' +
+      '<td>' + (kontak || '<span class="pg-abu">-</span>') + '</td>' +
+      '<td><span class="pg-pill ' + (x.aktif ? 'ok' : 'abu') + '">' + (x.aktif ? 'Aktif' : 'Nonaktif') + '</span></td>' +
+      '<td><div class="pg-aksi"><button class="btn sekunder kecil" data-aksi="edit" data-id="' + esc(x.id) + '">Edit</button>' +
+        (data.kolom.aktif && !x.saya ? '<button class="btn sekunder kecil" data-aksi="aktif" data-id="' + esc(x.id) + '">' + (x.aktif ? 'Nonaktifkan' : 'Aktifkan') + '</button>' : '') +
+      '</div></td></tr>';
+  }
+
+  function renderTabel() {
+    if (!data) return;
+    const kata = cari.trim().toLowerCase();
+    const dasar = data.items.filter(x => (!status || (status === 'aktif') === x.aktif) &&
+      (!kata || [x.nama, x.username, x.nip, x.bagian, x.email, x.hp, x.id].join(' ').toLowerCase().indexOf(kata) !== -1));
+    q('#pg-tabs').innerHTML = TABS.map(t => '<button class="pg-tab' + (t[0] === tab ? ' aktif' : '') + '" data-aksi="tab" data-t="' + t[0] + '">' + t[1] +
+      '<em>' + (t[0] ? dasar.filter(x => x.kode === t[0]).length : dasar.length) + '</em></button>').join('');
+
+    const list = dasar.filter(x => !tab || x.kode === tab);
+    const total = Math.max(1, Math.ceil(list.length / BARIS));
+    if (hal > total) hal = total;
+    const mulai = (hal - 1) * BARIS, potong = list.slice(mulai, mulai + BARIS);
+
+    q('#pg-tbody').innerHTML = potong.length ? potong.map(baris).join('')
+      : '<tr class="pg-kosong"><td colspan="6">' + (data.items.length ? 'Tidak ada hasil yang cocok.' : 'Belum ada pengguna.') + '</td></tr>';
+    q('#pg-info').innerHTML = list.length ? 'Menampilkan <b>' + (mulai + 1) + ' - ' + (mulai + potong.length) + '</b> dari <b>' + list.length + '</b> pengguna' : 'Tidak ada data';
+
+    let awal = Math.max(1, hal - 2), akhir = Math.min(total, awal + 4);
+    awal = Math.max(1, akhir - 4);
+    let p = '<button data-aksi="hal" data-h="' + (hal - 1) + '"' + (hal === 1 ? ' disabled' : '') + ' aria-label="Sebelumnya">&lsaquo;</button>';
+    for (let i = awal; i <= akhir; i++) p += '<button class="' + (i === hal ? 'aktif' : '') + '" data-aksi="hal" data-h="' + i + '">' + i + '</button>';
+    p += '<button data-aksi="hal" data-h="' + (hal + 1) + '"' + (hal === total ? ' disabled' : '') + ' aria-label="Berikutnya">&rsaquo;</button>';
+    q('#pg-pager').innerHTML = p;
+  }
+
+  // ---------------- Pop-up tambah / edit ----------------
+  const v = id => { const e = q('#pg-f-' + id); return e ? e.value : ''; };
+  const inp = (id, nilai, ekstra) => '<input id="pg-f-' + id + '" type="text" value="' + esc(nilai) + '" ' + (ekstra || '') + '>';
+  const fld = (id, label, isi, penuh) => '<div class="pg-f' + (penuh ? ' penuh' : '') + '"><label class="pg-lbl" for="pg-f-' + id + '">' + label + '</label>' + isi + '</div>';
+  const sel = (id, arr, cur) => '<div class="pg-pilih" style="width:100%"><select id="pg-f-' + id + '">' +
+    arr.map(a => '<option value="' + esc(a[0]) + '"' + (String(a[0]) === String(cur) ? ' selected' : '') + '>' + esc(a[1]) + '</option>').join('') + '</select>' + ikon('chevron') + '</div>';
+
+  function aturBagian() {
+    const p = q('#pg-f-peran'), b = q('#pg-f-bagian');
+    if (p && b) b.closest('.pg-f').style.display = p.value === 'Driver' ? 'none' : '';
+  }
+
+  function bukaForm(id) {
+    if (!data) return;
+    const baru = !id;
+    const x = baru ? { aktif: true, peran: 'Pemohon' } : data.items.filter(i => i.id === id)[0];
+    if (!x) return;
+    const k = data.kolom;
+    const peran = PERAN.slice();
+    if (x.peran && x.peran !== '-' && peran.indexOf(x.peran) === -1) peran.push(x.peran);
+    form = { ambil: () => ({ id: id || '', nama: v('nama'), username: v('username'), email: v('email'), peran: v('peran'), bagian: v('bagian'),
+                             hp: v('hp'), nip: v('nip'), password: v('pw'), aktif: k.aktif ? v('aktif') === '1' : true }) };
+    const pw = '<input id="pg-f-pw" type="password" autocomplete="new-password" placeholder="' + (baru ? 'Minimal 8 karakter' : 'Kosongkan jika tidak diubah') + '">';
+    q('#pg-kotak').innerHTML =
+      '<div class="pg-mh"><h3>' + (baru ? 'Tambah Pengguna Baru' : 'Edit Pengguna') + '</h3><button class="pg-x" data-aksi="tutup" aria-label="Tutup">' + ikon('close') + '</button></div>' +
+      '<div class="pg-mb"><div class="pg-grid">' +
+        fld('nama', 'Nama Lengkap', inp('nama', x.nama || '', 'maxlength="80"'), true) +
+        fld('username', 'Username', inp('username', x.username || '', 'maxlength="30" autocomplete="off"')) +
+        fld('email', 'Email', inp('email', x.email || '', 'maxlength="80" placeholder="nama@pln.co.id" autocomplete="off"')) +
+        fld('peran', 'Peran', sel('peran', peran.map(p => [p, p]), x.peran)) +
+        fld('bagian', 'Bagian / Unit', inp('bagian', x.bagian || '', 'maxlength="80" list="pg-bagian-list" placeholder="Pilih atau ketik"') +
+          '<datalist id="pg-bagian-list">' + (data.bagianList || []).map(b => '<option value="' + esc(b) + '">').join('') + '</datalist>') +
+        fld('hp', 'No. HP', inp('hp', x.hp || '', 'maxlength="20" inputmode="tel" placeholder="081234567890"')) +
+        (k.nip ? fld('nip', 'NIP (opsional)', inp('nip', x.nip || '', 'maxlength="30"')) : '') +
+        fld('pw', baru ? 'Password Awal' : 'Password Baru (opsional)', pw) +
+        (k.aktif ? fld('aktif', 'Status Akun', sel('aktif', [['1', 'Aktif'], ['0', 'Nonaktif']], x.aktif ? '1' : '0')) : '') +
+      '</div></div>' +
+      '<div class="pg-mf"><span class="pg-err" id="pg-err"></span><button class="btn sekunder kecil" data-aksi="tutup">Batal</button><button class="btn utama kecil" id="pg-simpan" data-aksi="simpan">Simpan</button></div>';
+    q('#pg-overlay').classList.add('show');
+    aturBagian();
+    q('#pg-f-nama').focus();
+  }
+
+  function tutup() { q('#pg-overlay').classList.remove('show'); form = null; }
+  function segarkan() { delete App.cache.mobildriver; delete App.cache.beranda; muat(); }
+
+  async function simpan() {
+    if (!form) return;
+    const tombol = q('#pg-simpan');
+    tombol.disabled = true; tombol.textContent = 'Menyimpan...'; q('#pg-err').textContent = '';
+    try {
+      const r = await kirim('adminSimpanPengguna', form.ambil());
+      toast(r.pesan); tutup(); segarkan();
+    } catch (e) {
+      if (e.kode === 'SESI') { tutup(); galat(e.message, e.kode); return; }
+      q('#pg-err').textContent = e.message;
+      tombol.disabled = false; tombol.textContent = 'Simpan';
+    }
+  }
+
+  async function ubahAktif(a) {
+    const x = data.items.filter(i => i.id === a.dataset.id)[0];
+    if (!x) return;
+    const ke = !x.aktif;
+    const akibat = {
+      pemohon: ['tidak akan bisa mengajukan peminjaman kendaraan.', 'akan bisa mengajukan peminjaman kendaraan lagi.'],
+      driver: ['tidak akan bisa ditugaskan dan tidak muncul lagi sebagai pilihan driver.', 'akan bisa ditugaskan dan dipilih sebagai driver lagi.'],
+      admin: ['tidak akan bisa membuka Portal Admin.', 'akan bisa membuka Portal Admin lagi.']
+    }[x.kode] || ['akunnya akan dinonaktifkan.', 'akunnya akan diaktifkan lagi.'];
+    const teks = x.nama + ' ' + akibat[ke ? 1 : 0];
+    if (!(await konfirmasi((ke ? 'Aktifkan' : 'Nonaktifkan') + ' akun?', teks, ke ? 'Aktifkan' : 'Nonaktifkan'))) return;
+    a.disabled = true;
+    try { const r = await kirim('adminAktifPengguna', x.id, ke); toast(r.pesan); segarkan(); }
+    catch (e) { a.disabled = false; if (e.kode === 'SESI') galat(e.message, e.kode); else toast(e.message); }
+  }
+
+  // ---------------- Pemasangan ----------------
+  const AKSI = {
+    ulang: () => muat(),
+    tab: a => { tab = a.dataset.t; hal = 1; renderTabel(); },
+    hal: a => { hal = Number(a.dataset.h) || 1; renderTabel(); },
+    tambah: () => bukaForm(''),
+    edit: a => bukaForm(a.dataset.id),
+    aktif: ubahAktif,
+    tutup: tutup, simpan: simpan
+  };
+
+  function init() {
+    R.addEventListener('click', e => {
+      if (e.target.id === 'pg-overlay') { tutup(); return; }
+      if (e.target.closest('#pg-masuk')) {
+        e.preventDefault();
+        try { sessionStorage.removeItem('sid'); } catch (x) {}
+        google.script.run.withSuccessHandler(h => { document.open(); document.write(h); document.close(); }).bukaLogin();
+        return;
+      }
+      const a = e.target.closest('[data-aksi]');
+      if (a && !a.disabled && AKSI[a.dataset.aksi]) AKSI[a.dataset.aksi](a);
+    });
+    R.addEventListener('input', e => { if (e.target.id === 'pg-cari') { cari = e.target.value; hal = 1; renderTabel(); } });
+    R.addEventListener('change', e => {
+      if (e.target.id === 'pg-status') { status = e.target.value; hal = 1; renderTabel(); }
+      else if (e.target.id === 'pg-f-peran') aturBagian();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && App.sekarang === 'pengguna') tutup(); });
+  }
+
+  App.daftar('pengguna', { init: init, tampil: () => muat(), tinggal: tutup });
+})();
+</script>

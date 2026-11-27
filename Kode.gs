@@ -1,9 +1,10 @@
 // ==========================================
-// PLNDinas - Kode.gs (Landing, Login, Register, Verifikasi, Reset Password)
+// PLNDinas - Kode.gs (AUTH: Landing, Login, Register, Verifikasi, Reset Password)
+// Fitur dashboard Pemohon ada di Pemohon.gs
 // ==========================================
 const SPREADSHEET_ID = '1msXBs4CB047sayFPQfgWzXATOCQNR5EAiScQoQmWe-M';
 const SHEET_PENGGUNA = 'PENGGUNA';
-const APP_NAME = 'PLNDinas';
+const APP_NAME = 'BookTrip PLN';
 
 // Daftar bagian di dropdown Register. Ubah sesuai kebutuhan.
 var DAFTAR_BAGIAN = [
@@ -13,6 +14,8 @@ var DAFTAR_BAGIAN = [
 
 const PREFIX_ID = { 'Pemohon': 'USR', 'Admin': 'ADM', 'Driver': 'DRV' };
 const HALAMAN_DASHBOARD = { 'Pemohon': 'dashboardPemohon', 'Admin': 'dashboardAdmin', 'Driver': 'dashboardDriver' };
+// Nama file HTML cangkang (shell) tiap dashboard
+const FILE_DASHBOARD = { 'dashboardPemohon': 'PemohonApp', 'dashboardAdmin': 'AdminApp', 'dashboardDriver': 'DriverApp' };
 const STATUS_TERVERIFIKASI = 'Terverifikasi';
 const STATUS_BELUM_VERIFIKASI = 'Belum Verifikasi';
 const RESET_DURASI_MS = 60 * 60 * 1000;   // link reset berlaku 1 jam
@@ -22,7 +25,7 @@ const SESI_DETIK = 6 * 60 * 60;           // sesi login 6 jam (batas maksimum Ca
 // Urutan kolom di sheet bebas, kode membaca berdasarkan NAMA header.
 const KOLOM_WAJIB = [
   'ID_PENGGUNA', 'NAMA', 'USERNAME', 'EMAIL', 'PASSWORD', 'BAGIAN', 'PERAN', 'NO_HP', 'AKTIF',
-  'TOKEN_VERIFIKASI', 'STATUS_VERIFIKASI', 'RESET_TOKEN', 'RESET_EXPIRY'
+  'TOKEN_VERIFIKASI', 'STATUS_VERIFIKASI', 'RESET_TOKEN', 'RESET_EXPIRY', 'NIP'
 ];
 
 // ==========================================
@@ -48,7 +51,8 @@ function doGet(e) {
     case 'dashboardPemohon':
     case 'dashboardAdmin':
     case 'dashboardDriver':
-      return halamanDashboard_(page, baseUrl, p.sid);
+      if (p.sid && getSesi(p.sid)) return halamanDashboard_(page, baseUrl, p.sid);
+      break; // tanpa sesi: tampilkan Auth. Auth.html memulihkan sesi dari browser, atau menampilkan login
     default: break; // 'login' dan halaman tak dikenal -> Auth, tampilan login
   }
 
@@ -73,29 +77,37 @@ function halamanDashboard_(page, baseUrl, sid) {
       '<p style="font-family:sans-serif;padding:40px;text-align:center">Sesi berakhir. ' +
       '<a target="_top" href="' + baseUrl + '?page=login">Masuk lagi</a></p>');
   }
-  var namaFile = page.charAt(0).toUpperCase() + page.slice(1); // dashboardAdmin -> DashboardAdmin
+  var namaFile = FILE_DASHBOARD[page];
+  var t;
   try {
-    var t = HtmlService.createTemplateFromFile(namaFile);
-    t.baseUrl = baseUrl; t.sid = sid; t.user = user;
-    return t.evaluate().setTitle(APP_NAME)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    t = HtmlService.createTemplateFromFile(namaFile);
   } catch (err) {
     return HtmlService.createHtmlOutput(
       '<p style="font-family:sans-serif;padding:40px;text-align:center">Halo ' + escapeHtml_(user.nama) +
       ' (' + escapeHtml_(user.peran) + '). File ' + namaFile + '.html belum dibuat.</p>');
   }
+  t.baseUrl = baseUrl; t.sid = sid; t.user = user; t.daftarBagian = DAFTAR_BAGIAN;
+  return t.evaluate().setTitle(APP_NAME)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// Menyisipkan file HTML lain (CSS/JS/komponen) ke dalam template
+function include(nama) {
+  return HtmlService.createHtmlOutputFromFile(nama).getContent();
 }
 
 // ==========================================
 // AKSES SHEET (berdasarkan nama header)
 // ==========================================
-function bukaTabel_() {
-  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_PENGGUNA);
-  if (!sheet) throw new Error('Sheet "' + SHEET_PENGGUNA + '" tidak ditemukan.');
+function bukaTabel_() { return bukaSheet_(SHEET_PENGGUNA, KOLOM_WAJIB); }
+
+function bukaSheet_(namaSheet, kolomWajib) {
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(namaSheet);
+  if (!sheet) throw new Error('Sheet "' + namaSheet + '" tidak ditemukan.');
   var lastCol = Math.max(sheet.getLastColumn(), 1);
   var header = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (x) { return String(x).trim().toUpperCase(); });
-  KOLOM_WAJIB.forEach(function (n) {
+  kolomWajib.forEach(function (n) {
     if (header.indexOf(n) === -1) {
       sheet.getRange(1, header.length + 1).setValue(n);
       header.push(n);
@@ -189,7 +201,8 @@ function prosesLogin(identifier, password) {
                  message: 'Email Anda belum diverifikasi. Cek kotak masuk atau spam.' };
       }
       var peran = teks_(r[t.h.PERAN]) || 'Pemohon';
-      var user = { id: r[t.h.ID_PENGGUNA], nama: r[t.h.NAMA], email: r[t.h.EMAIL], bagian: r[t.h.BAGIAN], peran: peran };
+      var user = { id: r[t.h.ID_PENGGUNA], nama: r[t.h.NAMA], username: r[t.h.USERNAME], email: r[t.h.EMAIL],
+                   bagian: r[t.h.BAGIAN], peran: peran, nip: teks_(r[t.h.NIP]) };
       return { status: 'success', message: 'Selamat datang, ' + user.nama,
                targetPage: HALAMAN_DASHBOARD[peran] || 'dashboardPemohon', sid: buatSesi_(user) };
     }
@@ -251,6 +264,12 @@ function prosesRegister(nama, username, email, password, peran, bagian, noHp) {
     // Simpan No. HP sebagai teks supaya angka 0 di depan tidak hilang
     t.sheet.getRange(t.sheet.getLastRow(), t.h.NO_HP + 1).setNumberFormat('@').setValue(noHp);
 
+    // Driver baru otomatis dibuatkan baris di sheet DRIVER (gagal di sini tidak membatalkan pendaftaran)
+    if (peran === 'Driver') {
+      try { tambahBarisDriver_(row[t.h.ID_PENGGUNA]); }
+      catch (d) { Logger.log('Gagal membuat baris DRIVER: ' + d.message); }
+    }
+
     try { kirimEmailVerifikasi_(nama, email, token); }
     catch (m) { Logger.log('Gagal kirim email verifikasi: ' + m.message); }
 
@@ -260,6 +279,21 @@ function prosesRegister(nama, username, email, password, peran, bagian, noHp) {
   } finally {
     try { lock.releaseLock(); } catch (x) {}
   }
+}
+
+// Membuat baris di sheet DRIVER berdasarkan NAMA header (urutan kolom bebas, kolom tidak dikenal dibiarkan kosong).
+function tambahBarisDriver_(idPengguna) {
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('DRIVER');
+  if (!sheet) throw new Error('Sheet DRIVER tidak ditemukan.');
+  var header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+    .map(function (x) { return String(x).trim().toUpperCase(); });
+  var row = new Array(header.length).fill('');
+  var isi = { ID_DRIVER: idPengguna, ID_PENGGUNA: idPengguna, AKTIF: 'YA' };
+  Object.keys(isi).forEach(function (k) {
+    var i = header.indexOf(k);
+    if (i !== -1) row[i] = isi[k];
+  });
+  sheet.appendRow(row);
 }
 
 // Validasi real-time di form Register
@@ -403,4 +437,66 @@ function kirimEmail_(to, subjek, nama, isi, teksTombol, link, catatan) {
     to: to, subject: subjek, name: APP_NAME, htmlBody: html,
     body: 'Halo ' + nama + ',\n\n' + isi + '\n\n' + teksTombol + ': ' + link + '\n\n' + catatan
   });
+}
+
+// ==========================================
+// DAFTAR HALAMAN TIAP ROLE + PEMUAT HALAMAN (dipakai semua role)
+// Tambah halaman baru cukup menambah satu baris di role yang sesuai.
+// Format: NamaHalamanDiMenu: 'NamaFileHtml'
+// ==========================================
+const HALAMAN = {
+  Pemohon: {
+    PemohonBeranda:     'PemohonBeranda',
+    PemohonBuatBooking: 'PemohonBuatBooking',
+    PemohonBookingSaya: 'PemohonBookingSaya',
+    PemohonRiwayat:     'PemohonRiwayat'
+  },
+  Admin:  {
+    BerandaAdmin:         'AdminBeranda',
+    DataMobilDriverAdmin: 'AdminDataMobilDriver',
+    RekapLaporanAdmin:    'AdminRekap',
+    PenggunaAdmin:        'AdminPengguna'
+  },
+  Driver: {}
+};
+
+// Satu fungsi untuk semua role: peran dibaca dari sesi
+function loadPageContent(namaHalaman, sid) {
+  var u = getSesi(sid);
+  if (!u) return '<div class="empty">Sesi berakhir. Muat ulang halaman lalu masuk lagi.</div>';
+  var file = (HALAMAN[u.peran] || {})[namaHalaman];
+  if (!file) return '<div class="empty">Halaman tidak ditemukan.</div>';
+  try {
+    return HtmlService.createHtmlOutputFromFile(file).getContent();
+  } catch (e) {
+    return '<div class="empty"><b>Halaman ini segera hadir.</b><br>File ' + file + '.html belum dibuat.</div>';
+  }
+}
+
+// ==========================================
+// TAMPILKAN DASHBOARD / LOGIN TANPA BERPINDAH URL
+// (menghindari masalah akun Google ganda saat berpindah alamat)
+// ==========================================
+function bukaDashboard(sid) {
+  var user = getSesi(sid);
+  if (!user) return { status: 'error', message: 'Sesi berakhir. Silakan masuk lagi.' };
+  var namaFile = FILE_DASHBOARD[HALAMAN_DASHBOARD[user.peran] || 'dashboardPemohon'];
+  var t;
+  try {
+    t = HtmlService.createTemplateFromFile(namaFile);
+  } catch (err) {
+    return { status: 'error', message: 'Dashboard ' + user.peran + ' belum tersedia (file ' + namaFile + '.html belum dibuat).' };
+  }
+  t.baseUrl = ScriptApp.getService().getUrl();
+  t.sid = sid; t.user = user; t.daftarBagian = DAFTAR_BAGIAN;
+  return { status: 'success', html: t.evaluate().getContent() };
+}
+
+function bukaLogin() {
+  var t = HtmlService.createTemplateFromFile('Auth');
+  t.baseUrl = ScriptApp.getService().getUrl();
+  t.initialView = 'view-login';
+  t.verifStatus = ''; t.verifPesan = ''; t.resetToken = '';
+  t.daftarBagian = DAFTAR_BAGIAN;
+  return t.evaluate().getContent();
 }

@@ -1,0 +1,142 @@
+<script>
+(function () {
+  const R = $('#h-rekap'), q = s => $(s, R);
+  let data = null, bulan = '', status = '', bagian = '', cari = '', hal = 1, baris = 5, tampilNow = [];
+
+  const CHIP = [['', 'Semua'], ['selesai', 'Selesai'], ['ditolak', 'Ditolak'], ['dibatalkan', 'Dibatalkan']];
+  const WARNA = { selesai: 'ok', ditolak: 'merah', dibatalkan: 'abu' };
+  const dec = (n, d) => Number(n).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const inisial = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(k => k.charAt(0)).join('').toUpperCase() || '?';
+  const bintang = n => { const p = Math.round(n); return '<span class="rk-b">' + '★'.repeat(p) + '</span><span class="rk-k">' + '★'.repeat(5 - p) + '</span>'; };
+
+  // ---------------- Muat & tampilkan ----------------
+  async function muat() {
+    if (!data) R.classList.add('memuat');
+    try {
+      const r = await panggil('adminGetRiwayat', bulan);
+      if (r && r.ok === false) return galat(r.pesan, r.kode);
+      render(r);
+    } catch (e) { galat(e && e.message); }
+  }
+
+  function galat(pesan, kode) {
+    R.classList.remove('memuat');
+    const sesi = kode === 'SESI';
+    q('#rk-masuk').hidden = !sesi; q('#rk-ulang').hidden = sesi;
+    if (sesi) q('#rk-masuk').href = BASE_URL + '?page=login';
+    q('#rk-galat-teks').textContent = pesan || 'Tidak dapat terhubung ke server.';
+    q('#rk-galat').hidden = false;
+    if (!data) q('#rk-tbody').innerHTML = '<tr class="rk-kosong"><td colspan="8">Data belum dapat dimuat. Periksa koneksi, lalu coba lagi.</td></tr>';
+  }
+
+  function render(d) {
+    data = d; bulan = d.bulan; hal = 1;
+    R.classList.remove('memuat');
+    q('#rk-galat').hidden = true;
+
+    q('#rk-bulan').innerHTML = d.bulanList.map(b => '<option value="' + b.v + '">' + esc(b.l) + '</option>').join('') + '<option value="semua">Semua Periode</option>';
+    q('#rk-bulan').value = bulan;
+
+    const daftarBagian = [];
+    d.items.forEach(x => { if (x.bagian && daftarBagian.indexOf(x.bagian) === -1) daftarBagian.push(x.bagian); });
+    daftarBagian.sort();
+    if (bagian && daftarBagian.indexOf(bagian) === -1) bagian = '';
+    q('#rk-bagian').innerHTML = '<option value="">Semua Bagian / Unit</option>' + daftarBagian.map(b => '<option value="' + esc(b) + '">' + esc(b) + '</option>').join('');
+    q('#rk-bagian').value = bagian;
+
+    const s = d.stats;
+    q('#rk-s-tiket').textContent = angka(s.total);
+    q('#rk-s-tiket-sub').textContent = s.selesai + ' selesai, ' + s.ditolak + ' ditolak, ' + s.dibatalkan + ' dibatalkan';
+    q('#rk-s-km').textContent = angka(s.km);
+    q('#rk-s-rating').textContent = s.rating === null ? '-' : dec(s.rating, 2);
+    q('#rk-s-rating-sub').innerHTML = s.rating === null ? 'Belum ada ulasan' : bintang(s.rating) + ' &nbsp;' + s.jumlahRating + ' ulasan driver';
+    q('#rk-s-durasi').textContent = s.durasi === null ? '-' : dec(s.durasi, 1);
+    renderTabel();
+  }
+
+  function baris_(x) {
+    const rating = x.kode !== 'selesai' ? '<span class="rk-abu">-</span>'
+      : x.rating === null ? '<span class="rk-abu">Belum dinilai</span>'
+      : '<span class="rk-rating" title="' + esc(x.ulasan) + '">' + bintang(x.rating) + '<em>' + dec(x.rating, 1) + '</em></span>';
+    return '<tr><td><span class="rk-kode">#' + esc(x.id) + '</span></td>' +
+      '<td><b>' + esc(x.tanggal) + '</b><small>' + esc(x.jam) + '</small></td>' +
+      '<td><div class="rk-orang"><span class="rk-av">' + esc(inisial(x.nama)) + '</span><div><b>' + esc(x.nama) + '</b><small>' + esc(x.bagian || '-') + '</small></div></div></td>' +
+      '<td class="rk-teks"><b>' + esc(x.tujuan || '-') + '</b>' + (x.keperluan ? '<small>' + esc(x.keperluan) + '</small>' : '') + '</td>' +
+      '<td>' + (x.mobil || x.plat ? '<b>' + esc(x.mobil || '-') + '</b><small><span class="plat">' + esc(x.plat || '-') + '</span></small>' : '<span class="rk-abu">-</span>') + '</td>' +
+      '<td>' + (x.driver ? esc(x.driver) : '<span class="rk-abu">-</span>') + '</td>' +
+      '<td><span class="rk-pill ' + (WARNA[x.kode] || 'abu') + '">' + esc(x.status) + '</span></td>' +
+      '<td>' + rating + '</td></tr>';
+  }
+
+  function renderTabel() {
+    if (!data) return;
+    const kata = cari.trim().toLowerCase();
+    const dasar = data.items.filter(x => (!bagian || x.bagian === bagian) &&
+      (!kata || [x.id, x.nama, x.bagian, x.tujuan, x.keperluan, x.mobil, x.plat, x.driver].join(' ').toLowerCase().indexOf(kata) !== -1));
+    const hitung = k => k ? dasar.filter(x => x.kode === k).length : dasar.length;
+    q('#rk-chips').innerHTML = CHIP.map(c => '<button class="rk-chip' + (c[0] === status ? ' aktif' : '') + '" data-aksi="chip" data-s="' + c[0] + '">' + c[1] + ' (' + hitung(c[0]) + ')</button>').join('');
+
+    const list = dasar.filter(x => !status || x.kode === status);
+    tampilNow = list;
+    const total = Math.max(1, Math.ceil(list.length / baris));
+    if (hal > total) hal = total;
+    const mulai = (hal - 1) * baris, potong = list.slice(mulai, mulai + baris);
+
+    q('#rk-tbody').innerHTML = potong.length ? potong.map(baris_).join('')
+      : '<tr class="rk-kosong"><td colspan="8">' + (data.items.length ? 'Tidak ada hasil yang cocok.' : 'Belum ada riwayat pada periode ini.') + '</td></tr>';
+    q('#rk-info').innerHTML = list.length ? 'Menampilkan <b>' + (mulai + 1) + ' - ' + (mulai + potong.length) + '</b> dari <b>' + list.length + '</b> riwayat' : 'Tidak ada data';
+
+    let awal = Math.max(1, hal - 2), akhir = Math.min(total, awal + 4);
+    awal = Math.max(1, akhir - 4);
+    let p = '<button data-aksi="hal" data-h="' + (hal - 1) + '"' + (hal === 1 ? ' disabled' : '') + ' aria-label="Sebelumnya">&lsaquo;</button>';
+    for (let i = awal; i <= akhir; i++) p += '<button class="' + (i === hal ? 'aktif' : '') + '" data-aksi="hal" data-h="' + i + '">' + i + '</button>';
+    p += '<button data-aksi="hal" data-h="' + (hal + 1) + '"' + (hal === total ? ' disabled' : '') + ' aria-label="Berikutnya">&rsaquo;</button>';
+    q('#rk-pager').innerHTML = p;
+  }
+
+  // ---------------- Ekspor CSV (sesuai filter yang sedang tampil) ----------------
+  function ekspor() {
+    if (!tampilNow.length) { toast('Tidak ada data untuk diekspor.'); return; }
+    const kolom = ['Kode Booking', 'Tanggal', 'Jam', 'Pemohon', 'Bagian', 'Tujuan', 'Keperluan', 'Mobil', 'Nopol', 'Driver', 'Status', 'Jarak (KM)', 'Rating', 'Ulasan'];
+    const sel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const baris = tampilNow.map(x => [x.id, x.tanggal, x.jam, x.nama, x.bagian, x.tujuan, x.keperluan, x.mobil, x.plat, x.driver, x.status,
+      x.km === null ? '' : x.km, x.rating === null ? '' : x.rating, x.ulasan].map(sel).join(','));
+    const blob = new Blob(['\ufeff' + [kolom.map(sel).join(',')].concat(baris).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'riwayat-booking-' + (bulan || 'semua') + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---------------- Pemasangan ----------------
+  const AKSI = {
+    ulang: () => muat(),
+    chip: a => { status = a.dataset.s; hal = 1; renderTabel(); },
+    hal: a => { hal = Number(a.dataset.h) || 1; renderTabel(); },
+    ekspor: ekspor
+  };
+
+  function init() {
+    R.addEventListener('click', e => {
+      if (e.target.closest('#rk-masuk')) {
+        e.preventDefault();
+        try { sessionStorage.removeItem('sid'); } catch (x) {}
+        google.script.run.withSuccessHandler(h => { document.open(); document.write(h); document.close(); }).bukaLogin();
+        return;
+      }
+      const a = e.target.closest('[data-aksi]');
+      if (a && !a.disabled && AKSI[a.dataset.aksi]) AKSI[a.dataset.aksi](a);
+    });
+    R.addEventListener('input', e => { if (e.target.id === 'rk-cari') { cari = e.target.value; hal = 1; renderTabel(); } });
+    R.addEventListener('change', e => {
+      const id = e.target.id;
+      if (id === 'rk-bulan') { bulan = e.target.value; status = ''; muat(); }
+      else if (id === 'rk-bagian') { bagian = e.target.value; hal = 1; renderTabel(); }
+      else if (id === 'rk-baris') { baris = Number(e.target.value) || 5; hal = 1; renderTabel(); }
+    });
+  }
+
+  App.daftar('rekap', { init: init, tampil: () => muat() });
+})();
+</script>

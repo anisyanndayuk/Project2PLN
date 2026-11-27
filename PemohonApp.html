@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookTrip PLN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+  :root{--y:#F7E52A;--yd:#E9D519;--navy:#0F2C59;--b:#1D6FA5;--bl:#E0F2FE;--ink:#111827;--mut:#6B7280;--line:#E5E7EB;--bg:#F6F8FC;--red:#DC2626;--hdr:68px;--sb:250px}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+  body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{cursor:pointer;font-family:inherit}
+  :focus-visible{outline:3px solid var(--b);outline-offset:2px}
+
+  /* ===== Sidebar ===== */
+  .sb{position:fixed;top:0;left:0;bottom:0;width:var(--sb);background:#fff;border-right:1px solid var(--line);padding:20px 14px;z-index:120;display:flex;flex-direction:column}
+  .brand{display:flex;align-items:center;gap:10px;padding:2px 8px 26px}
+  .brand svg{width:40px;height:40px;flex-shrink:0}
+  .brand b{display:block;font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-.3px;line-height:1.1}
+  .brand small{display:block;font-size:11.5px;font-weight:500;color:var(--b);margin-top:2px}
+  .nav{display:flex;flex-direction:column;gap:6px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:#4B5563;font-size:14px;font-weight:500;text-decoration:none;transition:background .15s}
+  .nav-item i{width:18px;text-align:center;font-size:15px}
+  .nav-item:hover{background:#F9FAFB}
+  .nav-item.active{background:var(--y);color:var(--ink);font-weight:700;box-shadow:0 3px 10px rgba(233,213,25,.45)}
+  .bdg{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center}
+  .bdg.on{display:inline-flex}
+  .sp{flex:1}
+  .logout{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:#4B5563;font-size:14px;font-weight:500;text-decoration:none}
+  .logout:hover{background:#FEF2F2;color:var(--red)}
+  .ov{display:none;position:fixed;inset:0;background:rgba(17,24,39,.45);z-index:115}
+  .ov.on{display:block}
+
+  /* ===== Header ===== */
+  .hd{position:fixed;top:0;left:var(--sb);right:0;height:var(--hdr);background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;z-index:110}
+  .hl{display:flex;align-items:center;gap:8px;min-width:0}
+  .hl h1{font-size:16px;font-weight:800}
+  .hl p{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mt{display:none;background:none;border:0;font-size:20px;color:var(--ink);padding:6px}
+  .hr{display:flex;align-items:center;gap:16px}
+  .dpill{display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid #BAE0F7;background:#F0F9FF;border-radius:99px;font-size:12px;font-weight:600;color:var(--b);white-space:nowrap}
+  .pw{position:relative}
+  .bell{position:relative;width:38px;height:38px;border:0;background:none;font-size:18px;color:#4B5563;border-radius:50%}
+  .bell:hover{background:#F3F4F6}
+  .bell .dot{display:none;position:absolute;top:7px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid #fff}
+  .bell .dot.on{display:block}
+  .me{display:flex;align-items:center;gap:10px;background:none;border:0;text-align:right;color:var(--ink)}
+  .me b{display:block;font-size:13px}.me small{display:block;font-size:11.5px;color:var(--mut)}
+  .av{width:38px;height:38px;border-radius:50%;background:#7A6A12;color:#fff;border:2px solid #E7D96B;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+
+  /* ===== Popover ===== */
+  .pop,.npop{display:none;position:absolute;top:calc(100% + 12px);right:0;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 36px rgba(17,24,39,.16);z-index:130}
+  .pop{width:340px;max-width:92vw;padding:18px}
+  .npop{width:300px;max-width:92vw;padding:8px 0}
+  .pop.on,.npop.on{display:block}
+  .pph{display:flex;align-items:center;gap:12px}
+  .pph .av{width:42px;height:42px;font-size:16px}
+  .pph b{font-size:15px}
+  .pph .tag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:5px;background:var(--y);font-size:10px;font-weight:800;letter-spacing:.3px;vertical-align:1px}
+  .pph small{display:block;margin-top:2px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--mut)}
+  .pph .x{margin-left:auto;align-self:flex-start;background:none;border:0;font-size:16px;color:#6B7280;padding:2px 6px}
+  .pop hr{border:0;border-top:1px solid var(--line);margin:14px 0 4px}
+  .pop label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin:12px 0 5px}
+  .pop input,.pop select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+  .pop input:disabled{background:#F3F4F6;color:#6B7280;cursor:not-allowed}
+  .pop .mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .pop .lk{position:relative}.pop .lk i{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#9CA3AF;font-size:12px}
+  .pop .msg{display:none;margin-top:12px;padding:8px 10px;border-radius:8px;font-size:12.5px}
+  .pop .msg.ok{display:block;background:#DCFCE7;color:#166534}.pop .msg.er{display:block;background:#FEE2E2;color:#B91C1C}
+  .lnk{display:block;width:100%;text-align:center;background:none;border:0;color:var(--b);font-weight:600;font-size:12.5px;padding:0;margin-top:14px}
+  .pw2{display:none;border-top:1px solid var(--line);margin-top:12px;padding-top:2px}.pw2.on{display:block}
+  .ni{display:flex;gap:10px;padding:10px 16px;font-size:13px;line-height:1.45;color:#374151}
+  .ni i{margin-top:3px;color:var(--b)}
+  .ni.kosong{color:var(--mut);justify-content:center}
+
+  /* ===== Tombol ===== */
+  .btn-y{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:1px solid var(--y);border-radius:10px;background:var(--y);color:var(--ink);font-size:13.5px;font-weight:700;transition:background .2s}
+  .btn-y:hover:not(:disabled){background:var(--yd)}
+  .btn-y:disabled{opacity:.6;cursor:not-allowed}
+  .btn-o{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:13px;font-weight:600}
+  .btn-o:hover:not(:disabled){background:#F9FAFB}.btn-o:disabled{opacity:.5;cursor:not-allowed}
+  .btn-w{width:100%;margin-top:12px}.btn-s{padding:8px 14px;font-size:12.5px}
+
+  /* ===== Area konten (offset terhadap sidebar & header) ===== */
+  .main{margin-left:var(--sb);margin-top:var(--hdr);padding:24px 28px 48px;min-height:calc(100vh - var(--hdr))}
+
+  /* ===== Modal logout ===== */
+  .mo{display:none;position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:2000;align-items:center;justify-content:center;padding:20px}
+  .mo.on{display:flex}
+  .mb{background:#fff;width:100%;max-width:360px;border-radius:14px;padding:26px 24px 22px;text-align:center}
+  .mb .ico{width:48px;height:48px;border-radius:50%;background:#FEF2F2;color:var(--red);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin:0 auto 12px}
+  .mb h3{font-size:16.5px;font-weight:800;margin-bottom:6px}.mb p{font-size:13.5px;color:var(--mut);margin-bottom:18px}
+  .mb .row{display:flex;gap:10px}.mb .row button{flex:1;padding:10px;border-radius:8px;border:0;font-size:13.5px;font-weight:700}
+  .mb .c{background:#F3F4F6;color:#374151}.mb .y{background:var(--red);color:#fff}.mb .y:disabled{background:#9CA3AF}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);max-width:90vw;background:#111827;color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;z-index:3000;display:none}
+
+  /* ===== Responsif ===== */
+  @media(max-width:1100px){.dpill{display:none}}
+  @media(max-width:768px){
+    .mt{display:block}.me>div:first-child{display:none}.hl p{display:none}
+    .sb{transform:translateX(-100%);transition:transform .25s;box-shadow:4px 0 16px rgba(0,0,0,.1)}
+    .sb.on{transform:none}
+    .hd{left:0;padding:0 14px}
+    .main{margin-left:0;padding:18px 14px 40px}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ===== Loading transisi halaman ===== */
+  @keyframes spinRing{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  @keyframes pulseText{0%,100%{opacity:.5}50%{opacity:1}}
+  @keyframes fadeInCard{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .app-loading-container{display:flex;align-items:center;justify-content:center;width:100%;height:65vh}
+  .loading-card{display:flex;flex-direction:column;align-items:center;gap:16px;padding:32px 48px;background:#fff;border-radius:20px;box-shadow:0 12px 30px rgba(15,44,89,.08);border:1px solid #E2E8F0;animation:fadeInCard .3s cubic-bezier(.16,1,.3,1) forwards}
+  .brand-spinner{position:relative;width:44px;height:44px}
+  .spinner-ring{width:100%;height:100%;border:4px solid rgba(0,162,233,.12);border-top:4px solid #00A2E9;border-right:4px solid #FFED00;border-radius:50%;animation:spinRing .8s linear infinite}
+  .loading-text h3{font-size:15px;font-weight:700;color:#0F2C59;margin:0 0 3px 0;text-align:center}
+  .loading-text p{font-size:12.5px;color:#64748B;margin:0;text-align:center;animation:pulseText 1.5s ease-in-out infinite}
+  </style>
+</head>
+<body>
+
+  <script>
+    var APP_BASE_URL = "<?!= baseUrl ?>";
+    var SID = "<?!= sid ?>";
+    var USER = <?!= JSON.stringify(user).replace(/</g, '\\u003c') ?>;
+    var DAFTAR_BAGIAN = <?!= JSON.stringify(daftarBagian) ?>;
+  </script>
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sb" id="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#F7E52A"/><path d="M27 8 17 26h6l-3 12 11-18h-6z" fill="#E5252A"/><path d="M13 39c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0M13 43c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4 1.5 4 0" stroke="#1AA3D9" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+      <div><b>PLNDinas</b><small>Peminjaman Mobil Dinas</small></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" data-view="PemohonBeranda" href="#"><i class="fas fa-house"></i>Beranda</a>
+      <a class="nav-item" data-view="PemohonBuatBooking" href="#"><i class="fas fa-circle-plus"></i>Buat Booking</a>
+      <a class="nav-item" data-view="PemohonBookingSaya" href="#"><i class="far fa-calendar"></i>Booking Saya</a>
+      <a class="nav-item" data-view="PemohonRiwayat" href="#"><i class="fas fa-clock-rotate-left"></i>Riwayat &amp; Rating<span class="bdg" id="badgeDinilai">0</span></a>
+    </nav>
+    <div class="sp"></div>
+    <a class="logout" id="btnLogout" href="#"><i class="fas fa-right-from-bracket"></i>Logout</a>
+  </aside>
+  <div class="ov" id="overlay"></div>
+
+  <!-- ===== Header ===== -->
+  <header class="hd">
+    <div class="hl">
+      <button type="button" class="mt" id="btnMenu" aria-label="Buka menu"><i class="fas fa-bars"></i></button>
+      <div><h1>Portal Pemohon</h1><p>Sistem Peminjaman Kendaraan Dinas - PLN UP3 Malang</p></div>
+    </div>
+
+    <div class="hr">
+      <div class="dpill"><i class="far fa-calendar"></i><span id="hdTanggal"></span></div>
+
+      <div class="pw">
+        <button type="button" class="bell" id="btnNotif" aria-label="Notifikasi" aria-expanded="false"><i class="far fa-bell"></i><span class="dot" id="notifDot"></span></button>
+        <div class="npop" id="popNotif"><div class="ni kosong">Tidak ada notifikasi.</div></div>
+      </div>
+
+      <div class="pw">
+        <button type="button" class="me" id="btnProfil" aria-haspopup="true" aria-expanded="false">
+          <div><b id="hdNama">-</b><small id="hdBagian">-</small></div>
+          <div class="av" id="hdAvatar">-</div>
+        </button>
+
+        <div class="pop" id="popProfil" role="dialog" aria-label="Profil saya">
+          <div class="pph">
+            <div class="av" id="pfAvatar">-</div>
+            <div><b id="pfJudul">-</b><span class="tag" id="pfTag">PEMOHON</span><small id="pfNip"></small></div>
+            <button type="button" class="x" id="pfTutup" aria-label="Tutup">&times;</button>
+          </div>
+          <hr>
+          <label for="pfUser">Username</label>
+          <div class="lk"><input id="pfUser" class="mono" type="text" disabled><i class="fas fa-lock"></i></div>
+          <label for="pfNama">Nama lengkap</label>
+          <input id="pfNama" type="text" autocomplete="off">
+          <label for="pfEmail">Email</label>
+          <input id="pfEmail" type="email" autocomplete="off">
+          <label for="pfPeran">Role</label>
+          <div class="lk"><input id="pfPeran" type="text" disabled><i class="far fa-id-badge"></i></div>
+          <label for="pfBagian">Bagian</label>
+          <select id="pfBagian"></select>
+          <div class="msg" id="pfMsg"></div>
+          <button type="button" class="btn-y btn-w" id="btnSimpanProfil">Simpan Perubahan</button>
+
+          <button type="button" class="lnk" id="btnTogglePw">Ubah Password</button>
+          <div class="pw2" id="boxPw">
+            <label for="pwLama">Password lama</label><input id="pwLama" type="password" autocomplete="current-password">
+            <label for="pwBaru">Password baru (min. 8 karakter)</label><input id="pwBaru" type="password" autocomplete="new-password">
+            <label for="pwKonf">Ulangi password baru</label><input id="pwKonf" type="password" autocomplete="new-password">
+            <div class="msg" id="pwMsg"></div>
+            <button type="button" class="btn-o btn-w" id="btnSimpanPw">Simpan Password</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Modal logout ===== -->
+  <div class="mo" id="modalLogout" role="dialog" aria-modal="true" aria-labelledby="mlJudul">
+    <div class="mb">
+      <div class="ico">!</div>
+      <h3 id="mlJudul">Konfirmasi logout</h3>
+      <p>Apakah Anda yakin ingin keluar?</p>
+      <div class="row">
+        <button type="button" class="c" id="logoutBatal">Batal</button>
+        <button type="button" class="y" id="logoutYa">Ya, logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Area konten ===== -->
+  <main class="main">
+    <div id="main-content">
+      <div class="app-loading-container">
+        <div class="loading-card">
+          <div class="brand-spinner"><div class="spinner-ring"></div></div>
+          <div class="loading-text">
+            <h3>Memuat Dashboard...</h3>
+            <p>Menyiapkan portal pemohon</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ===== Toast + loadView ===== -->
+  <script>
+    function toast(pesan) {
+      var t = document.getElementById('toast');
+      t.textContent = pesan;
+      t.style.display = 'block';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function () { t.style.display = 'none'; }, 2500);
+    }
+
+    var URL_HALAMAN = {
+      PemohonBeranda: 'berandaPemohon',
+      PemohonBuatBooking: 'buatBookingPemohon',
+      PemohonBookingSaya: 'bookingSayaPemohon',
+      PemohonRiwayat: 'riwayatPemohon'
+    };
+
+    function loadView(namaHalaman) {
+      var area = document.getElementById('main-content');
+
+      // ganti tulisan ?page=... di address bar tanpa reload
+      try {
+        if (google.script.history) {
+          google.script.history.push({ view: namaHalaman }, { page: URL_HALAMAN[namaHalaman] });
+        }
+      } catch (e) {}
+
+      document.querySelectorAll('.nav-item').forEach(function (el) {
+        el.classList.toggle('active', el.dataset.view === namaHalaman);
+      });
+
+      area.innerHTML =
+        '<div class="app-loading-container">' +
+          '<div class="loading-card">' +
+            '<div class="brand-spinner"><div class="spinner-ring"></div></div>' +
+            '<div class="loading-text">' +
+              '<h3>Memuat Konten...</h3>' +
+              '<p>Mohon tunggu sebentar</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      google.script.run
+        .withSuccessHandler(function (html) {
+          area.innerHTML = html;
+          window.scrollTo(0, 0);
+          if (namaHalaman === 'PemohonBeranda' && typeof initBerandaPemohon === 'function') initBerandaPemohon();
+        })
+        .withFailureHandler(function () {
+          area.innerHTML = '<div class="err">Gagal memuat halaman. Periksa koneksi lalu muat ulang.</div>';
+        })
+        .loadPageContent(namaHalaman, SID);
+    }
+  </script>
+
+  <!-- ===== JS Sidebar / Header / Profil ===== -->
+  <script>
+  (function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+
+    function inisial(nama) {
+      var k = String(nama || '').trim().split(/\s+/);
+      return ((k[0] || '-')[0] + (k[1] ? k[1][0] : '')).toUpperCase();
+    }
+
+    // Isi header dan popover dari data sesi
+    function isiProfil() {
+      $('hdNama').textContent = (USER.nama || '-').split(/\s+/)[0];
+      $('hdBagian').textContent = 'Bagian ' + (USER.bagian || '-');
+      $('hdAvatar').textContent = inisial(USER.nama).slice(0, 1);
+      $('pfAvatar').textContent = inisial(USER.nama).slice(0, 1);
+      $('pfJudul').textContent = (USER.nama || '-').split(/\s+/)[0];
+      $('pfTag').textContent = String(USER.peran || '').toUpperCase();
+      $('pfNip').textContent = USER.nip ? 'NIP: ' + USER.nip : '';
+      $('pfUser').value = USER.username || '';
+      $('pfNama').value = USER.nama || '';
+      $('pfEmail').value = USER.email || '';
+      $('pfPeran').value = USER.peran || '';
+      $('pfBagian').innerHTML = DAFTAR_BAGIAN.map(function (b) {
+        return '<option value="' + esc(b) + '"' + (b === USER.bagian ? ' selected' : '') + '>' + esc(b) + '</option>';
+      }).join('');
+    }
+    isiProfil();
+    $('hdTanggal').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+
+    function pesan(id, teks, tipe) {
+      var el = $(id);
+      el.className = 'msg' + (teks ? ' ' + tipe : '');
+      el.textContent = teks || '';
+    }
+
+    // ----- Popover profil & notifikasi -----
+    function tutupSemua() {
+      ['popProfil', 'popNotif'].forEach(function (id) { $(id).classList.remove('on'); });
+      $('btnProfil').setAttribute('aria-expanded', 'false');
+      $('btnNotif').setAttribute('aria-expanded', 'false');
+    }
+    function toggle(popId, btnId) {
+      var buka = !$(popId).classList.contains('on');
+      tutupSemua();
+      $(popId).classList.toggle('on', buka);
+      $(btnId).setAttribute('aria-expanded', buka ? 'true' : 'false');
+      return buka;
+    }
+    $('btnProfil').addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (toggle('popProfil', 'btnProfil')) { pesan('pfMsg', ''); pesan('pwMsg', ''); }
+    });
+    $('btnNotif').addEventListener('click', function (e) { e.stopPropagation(); toggle('popNotif', 'btnNotif'); });
+    $('pfTutup').addEventListener('click', tutupSemua);
+    document.addEventListener('click', function (e) { if (!e.target.closest('.pw')) tutupSemua(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { tutupSemua(); $('modalLogout').classList.remove('on'); }
+    });
+
+    $('btnSimpanProfil').addEventListener('click', function () {
+      var btn = this;
+      pesan('pfMsg', '');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (r) {
+          btn.disabled = false;
+          if (r.status === 'success') {
+            USER = r.user; isiProfil();
+            pesan('pfMsg', r.message, 'ok');
+            if (typeof initSapaBeranda === 'function') initSapaBeranda();
+          } else pesan('pfMsg', r.message, 'er');
+        })
+        .withFailureHandler(function () { btn.disabled = false; pesan('pfMsg', 'Koneksi terputus. Coba lagi.', 'er'); })
+        .simpanProfil(SID, $('pfNama').value, $('pfEmail').value, $('pfBagian').value);
+    });
+
+    $('btnTogglePw').addEventListener('click', function () { $('boxPw').classList.toggle('on'); });
+    $('btnSimpanPw').addEventListener('click', function () {
+      var btn = this, lama = $('pwLama').value, baru = $('pwBaru').value, konf = $('pwKonf').value;
+      pesan('pwMsg', '');
+      if (!lama || !baru) return pesan('pwMsg', 'Isi password lama dan password baru.', 'er');
+      if (baru.length < 8) return pesan('pwMsg', 'Password baru minimal 8 karakter.', 'er');
+      if (baru !== konf) return pesan('pwMsg', 'Konfirmasi password tidak sama.', 'er');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (r) {
+          btn.disabled = false;
+          pesan('pwMsg', r.message, r.status === 'success' ? 'ok' : 'er');
+          if (r.status === 'success') { $('pwLama').value = ''; $('pwBaru').value = ''; $('pwKonf').value = ''; }
+        })
+        .withFailureHandler(function () { btn.disabled = false; pesan('pwMsg', 'Koneksi terputus. Coba lagi.', 'er'); })
+        .ubahPassword(SID, lama, baru);
+    });
+
+    // ----- Navigasi + menu mobile -----
+    function tutupSidebar() { $('sidebar').classList.remove('on'); $('overlay').classList.remove('on'); }
+    $('btnMenu').addEventListener('click', function () { $('sidebar').classList.toggle('on'); $('overlay').classList.toggle('on'); });
+    $('overlay').addEventListener('click', tutupSidebar);
+    document.querySelectorAll('.nav-item').forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); loadView(a.dataset.view); tutupSidebar(); });
+    });
+
+    // ----- Logout -----
+    $('btnLogout').addEventListener('click', function (e) { e.preventDefault(); $('modalLogout').classList.add('on'); });
+    $('logoutBatal').addEventListener('click', function () { $('modalLogout').classList.remove('on'); });
+    $('modalLogout').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('on'); });
+    $('logoutYa').addEventListener('click', function () {
+      this.disabled = true; this.textContent = 'Logout...';
+      var tombol = this;
+      function keluar() {
+        google.script.run
+          .withSuccessHandler(function (html) { document.open(); document.write(html); document.close(); })
+          .withFailureHandler(function () {
+            tombol.disabled = false; tombol.textContent = 'Ya, logout';
+            if (typeof toast === 'function') toast('Gagal keluar. Periksa koneksi lalu coba lagi.');
+          })
+          .bukaLogin();
+      }
+      google.script.run.withSuccessHandler(keluar).withFailureHandler(keluar).logoutUser(SID);
+    });
+
+    // ----- Dipanggil halaman: badge menu & isi notifikasi -----
+    window.setBadgeDinilai = function (n) {
+      var b = $('badgeDinilai');
+      b.textContent = n > 99 ? '99+' : n;
+      b.classList.toggle('on', n > 0);
+    };
+    window.setNotif = function (daftar) {
+      $('notifDot').classList.toggle('on', daftar.length > 0);
+      $('popNotif').innerHTML = daftar.length
+        ? daftar.map(function (t) { return '<div class="ni"><i class="fas fa-circle-info"></i><span>' + esc(t) + '</span></div>'; }).join('')
+        : '<div class="ni kosong">Tidak ada notifikasi.</div>';
+    };
+  })();
+  </script>
+
+  <?!= include('PemohonBerandaJS'); ?>
+
+  <script>loadView('PemohonBeranda');</script>
+</body>
+</html>
