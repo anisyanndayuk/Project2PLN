@@ -46,12 +46,13 @@
 
   function daftarMendatang(d) {
     q('#m-jumlah').textContent = d.mendatang.length + ' tugas';
-    q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map(t =>
-      '<button class="m-item" data-aksi="detail"><div class="m-tgl"><span>' + esc(tglPendek(t.tanggal)) + ', ' + esc(t.jam) + ' WIB</span><span class="pill">Disetujui</span></div>' +
+    q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map((t, i) =>
+      '<button class="m-item" data-aksi="detail" data-i="' + i + '"><div class="m-tgl"><span>' + esc(tglPendek(t.tanggal)) + ', ' + esc(t.jam) + ' WIB</span><span class="pill">Disetujui</span></div>' +
       '<b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
       '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span><span>' + esc(t.mobil) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></button>'
     ).join('') : '<div class="kosong kecil">' + ikon('calendar') + '<p>Belum ada tugas mendatang.</p></div>';
     q('#m-semua').textContent = 'Lihat semua tugas (' + d.totalTugas + ')';
+    q('#m-semua').dataset.hal = 'tugas';
   }
 
   function render(d) {
@@ -59,11 +60,14 @@
     terakhir = d;
     R.classList.remove('memuat');
     q('#b-galat').hidden = true;
-    q('#b-info').hidden = d.profilDriverAda;
+    const pn = d.penugasan || {}, bn = q('#b-info'), pesan = !pn.bisa ? pn.alasan : pn.peringatan;
+    if (pesan) bn.textContent = pesan;                       // teks banner dari server (belum terdaftar / Nonaktif / SIM)
+    bn.classList.toggle('galat', !!pesan && !pn.bisa);
+    bn.hidden = !pesan;
     Shell.isiHeader(d.pengguna);
 
     q('#b-halo').textContent = 'Halo, ' + d.pengguna.nama;
-    q('#b-status-driver').textContent = d.statusDriver ? 'Driver ' + d.statusDriver : 'Driver';
+    q('#b-status-driver').textContent = [d.jenisDriver ? 'Driver ' + d.jenisDriver : 'Driver', d.statusDriver].filter(Boolean).join(' · ');
     q('#b-status-teks').textContent = { ada: 'Ada ' + d.jumlahHariIni + ' tugas hari ini', bertugas: 'Sedang dalam perjalanan', kosong: 'Belum ada tugas hari ini' }[d.statusHariIni];
     R.querySelectorAll('#b-chips span').forEach(c => c.classList.toggle('on', c.dataset.k === d.statusHariIni));
 
@@ -99,21 +103,31 @@
     catch (e) { galat(e && e.message); }
   }
 
+  // Kartu statistik dijadikan tombol: Total perjalanan dan Total jarak membuka modal, Rating menuju halaman Rating Saya
+  function jadikanKartuKlik() {
+    const a = q('#s-total'), b = q('#s-jarak');
+    if (!a || !b) return;
+    let baris = a.parentElement;
+    while (baris && !baris.contains(b)) baris = baris.parentElement;   // induk bersama = baris kartu
+    if (!baris) return;
+    [['#s-total', 'total'], ['#s-jarak', 'jarak'], ['#s-rating', 'rating']].forEach(p => {
+      let k = q(p[0]);
+      while (k && k.parentElement !== baris) k = k.parentElement;
+      if (!k) return;
+      k.dataset.aksi = p[1]; k.setAttribute('role', 'button'); k.tabIndex = 0; k.style.cursor = 'pointer';
+      k.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); k.click(); } });
+    });
+  }
+
   function init() {
-  R.addEventListener('click', e => {
-    if (e.target.closest('#b-masuk')) {
-      e.preventDefault();
-      try { sessionStorage.removeItem('sid'); } catch (x) {}
-      google.script.run
-        .withSuccessHandler(h => { document.open(); document.write(h); document.close(); })
-        .bukaLogin();
-      return;
-    }
-    const a = e.target.closest('[data-aksi]');
-    if (!a) return;
-    if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }
-    else toast('Fitur ini dibuat pada tahap berikutnya');
-  });
+    jadikanKartuKlik();
+    R.addEventListener('click', e => {
+      const a = e.target.closest('[data-aksi]');
+      if (!a) return;
+      if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }
+      else if (terakhir && typeof Modal !== 'undefined') Modal.jalankan(a.dataset.aksi, a.dataset.i, terakhir);
+      else toast('Data belum dimuat. Coba lagi sebentar.');
+    });
   }
 
   App.daftar('beranda', { init: init, tampil: muat, tinggal: () => clearInterval(timer) });
