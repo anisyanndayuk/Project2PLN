@@ -1,0 +1,174 @@
+<script>
+(function () {
+  const R = $('#h-tugas'), q = s => $(s, R);
+  const PER_GRUP = 6;                      // tugas yang ditampilkan per kelompok; sisanya lewat tombol "Tampilkan lainnya"
+  const BULAN = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+  const GRUP = [
+    { k: 'hari', judul: 'Hari Ini' }, { k: 'besok', judul: 'Besok' }, { k: 'minggu', judul: 'Minggu Ini' },
+    { k: 'nanti', judul: 'Nanti' }, { k: 'terlewat', judul: 'Terlewat' }
+  ];
+  let data = null, buka = {};              // buka: kelompok yang sudah diperluas
+  let timer = null;                        // stopwatch durasi untuk tugas yang sedang berjalan
+
+  const telp = s => { s = String(s || '').replace(/\D/g, ''); return s && s[0] === '8' ? '0' + s : s; };
+  const selisih = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+  const labelTgl = (iso, hari) => iso === hari ? 'Hari ini, ' + tglPanjang(iso).replace(/^[^,]+, /, '') : tglPanjang(iso);
+
+  // Kelompok sebuah tugas berdasarkan jarak harinya dari hari ini
+  function kelompok(t) {
+    if (t.kategori === 'terlewat') return 'terlewat';
+    if (t.kategori === 'berjalan' || t.kategori === 'hari_ini' || !t.tanggal) return t.tanggal ? 'hari' : 'nanti';
+    const s = selisih(data.hari, t.tanggal);
+    return s <= 0 ? 'hari' : s === 1 ? 'besok' : s <= 7 ? 'minggu' : 'nanti';
+  }
+
+  // Tugas fokus: yang sedang berjalan, kalau tidak ada maka yang paling dekat (terlewat tidak dipakai)
+  const pilihFokus = () => data.tugas.find(t => t.kategori === 'berjalan') || data.tugas.find(t => t.kategori === 'hari_ini') || data.tugas.find(t => t.kategori === 'mendatang') || null;
+
+  function isiBanner() {
+    const p = data.penugasan || {}, el = q('#tg-info');
+    const teks = !p.bisa ? p.alasan : p.peringatan;
+    el.hidden = !teks;
+    el.classList.toggle('galat', !p.bisa);
+    el.textContent = teks || '';
+  }
+
+  // ---- Stopwatch tugas berjalan ----
+  const dua = n => String(n).padStart(2, '0');
+  const jamDari = iso => (String(iso || '').match(/T(\d{2}:\d{2})/) || [])[1] || '-';   // jam Jakarta apa adanya dari ISO +07:00
+  function lewatMenit(t) {                  // positif = sudah lewat dari estimasi tiba (anggapan: perjalanan di hari yang sama)
+    if (!t.tanggal || !t.tiba) return null;
+    const e = Date.parse(t.tanggal + 'T' + t.tiba + ':00+07:00');
+    return isNaN(e) ? null : Math.round((Date.now() - e) / 60000);
+  }
+  const ketEstimasi = m => m === null ? '' : m > 0 ? 'Lewat ' + (m >= 60 ? Math.floor(m / 60) + ' j ' + (m % 60) + ' m' : m + ' menit') + ' dari estimasi' : 'Sesuai jadwal';
+  function hentikanTimer() { clearInterval(timer); timer = null; }
+  function jalankanTimer(t) {
+    hentikanTimer();
+    const el = q('#tg-timer');
+    if (!el || !t || App.sekarang !== 'tugas') return;   // jangan jalan bila halaman sudah ditinggalkan
+    const t0 = Date.parse(t.mulai);
+    const tik = () => {
+      if (!isNaN(t0)) { const s = Math.floor(Math.max(0, Date.now() - t0) / 1000); el.textContent = dua(Math.floor(s / 3600)) + ':' + dua(Math.floor(s % 3600 / 60)) + ':' + dua(s % 60); }
+      const lw = lewatMenit(t), k = q('#tg-lewat');
+      if (k) { k.textContent = ketEstimasi(lw); k.classList.toggle('lewat', lw > 0); }
+    };
+    tik(); timer = setInterval(tik, 1000);
+  }
+
+  function kartuFokus(t) {
+    const jalan = t.kategori === 'berjalan', hariH = !!t.tanggal && t.tanggal === data.hari, tel = telp(t.hp);
+    const bisa = !data.penugasan || data.penugasan.bisa !== false;
+    const nonaktifMulai = !jalan && (!hariH || !bisa);
+    const cat = jalan ? '' : !bisa ? 'Perjalanan belum bisa dimulai. Lihat pemberitahuan di atas.' : !hariH ? 'Tombol Mulai aktif pada hari keberangkatan.' : '';
+    return '<article class="kartu tg-fokus ' + (jalan ? 'berjalan' : '') + '">' +
+      '<div class="tg-fokus-atas"><span class="tg-tag">' + (jalan ? 'Sedang berjalan' : hariH ? 'Tugas hari ini' : 'Tugas berikutnya') + '</span><span class="tg-kode">#' + esc(t.id) + '</span></div>' +
+      '<h3>' + esc(t.tujuan || 'Tujuan belum diisi') + '</h3>' +
+      '<div class="tg-waktu"><span>' + ikon('calendar') + esc(t.tanggal ? labelTgl(t.tanggal, data.hari) : '-') + '</span>' +
+        '<span>' + ikon('clock') + esc(t.jam || '-') + (t.tiba ? ' - ' + esc(t.tiba) : '') + ' WIB</span></div>' +
+      (jalan ? '<div class="tg-jalan"><div><small>Durasi berjalan</small><b id="tg-timer">00:00:00</b><em>Dimulai pukul ' + esc(jamDari(t.mulai)) + ' WIB</em></div>' +
+        '<div><small>Km awal</small><b>' + angka(Number(t.kmAwal) || 0) + '</b><em>kilometer</em></div>' +
+        '<div><small>Estimasi tiba</small><b>' + esc(t.tiba || '-') + '</b><em id="tg-lewat"></em></div></div>' : '') +
+      '<div class="tg-info-f">' +
+        '<div><small>Pemohon</small><b>' + esc(t.pemohon) + '</b>' + (t.bagian ? '<div class="tg-ket">' + esc(t.bagian) + '</div>' : '') + (tel ? '<a href="tel:' + esc(tel) + '">' + ikon('phone') + esc(tel) + '</a>' : '') + '</div>' +
+        '<div><small>Mobil</small><div class="tg-mobil"><b>' + esc(t.mobil || '-') + '</b>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></div>' +
+        '<div><small>Jumlah penumpang</small><b>' + esc(t.penumpang) + ' orang</b></div>' +
+        '<div class="lebar"><small>Keperluan</small>' + esc(t.keperluan || '-') + '</div></div>' +
+      '<div class="tg-aksi">' +
+        (jalan ? '<button type="button" class="btn utama" data-aksi="selesai">' + ikon('flag') + 'Selesai perjalanan</button>'
+               : '<button type="button" class="btn utama" data-aksi="mulai"' + (nonaktifMulai ? ' disabled' : '') + '>' + ikon('send') + 'Mulai perjalanan</button>') +
+        '<button type="button" class="btn sekunder" data-aksi="detail-fokus">' + ikon('eye') + 'Lihat detail</button>' +
+        (cat ? '<p class="tg-cat">' + esc(cat) + '</p>' : '') + '</div></article>';
+  }
+
+  function kartuItem(t, n) {
+    const tel = telp(t.hp), lewat = t.kategori === 'terlewat';
+    const dt = t.tanggal ? '<b>' + Number(t.tanggal.slice(8, 10)) + '</b><span>' + BULAN[Number(t.tanggal.slice(5, 7)) - 1] + '</span>' : '<b>-</b>';
+    return '<div class="tg-item" role="button" tabindex="0" data-id="' + esc(t.id) + '" style="animation-delay:' + (n * 40) + 'ms">' +
+      '<div class="tg-dt">' + dt + '<small>' + esc(t.jam || '-') + '</small></div>' +
+      '<div class="tg-isi"><div class="tg-judul">' + esc(t.tujuan || '-') + '</div><div class="tg-ket">' + esc(t.keperluan || '') + '</div>' +
+        '<div class="tg-chip"><span>' + ikon('user') + esc(t.pemohon) + '</span><span>' + ikon('car') + esc(t.mobil || '-') + '</span>' +
+        (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '<span>' + ikon('users') + esc(t.penumpang) + '</span></div></div>' +
+      '<div class="tg-kanan"><span class="pill ' + (lewat ? 'lewat' : t.kategori === 'berjalan' ? 'jalan' : '') + '">' + (lewat ? 'Terlewat' : t.kategori === 'berjalan' ? 'Berjalan' : 'Disetujui') + '</span>' + ikon('arrow') + '</div></div>';
+  }
+
+  function render() {
+    R.classList.remove('memuat');
+    isiBanner();
+    const j = data.jumlah, fokus = pilihFokus();
+    q('#tg-sub').textContent = j.semua ? j.semua + ' tugas aktif' + (j.hariIni + j.berjalan ? ', ' + (j.hariIni + j.berjalan) + ' hari ini' : '') + '.' : 'Penugasan dari admin yang belum selesai.';
+
+    const fk = q('#tg-fokus');
+    fk.hidden = !fokus;
+    fk.innerHTML = fokus ? kartuFokus(fokus) : '';
+    jalankanTimer(fokus && fokus.kategori === 'berjalan' ? fokus : null);
+
+    const sisa = data.tugas.filter(t => !fokus || t.id !== fokus.id);
+    if (!data.tugas.length) {
+      const k = !data.profilDriverAda ? ['Data driver belum tersedia', 'Hubungi admin untuk mendaftarkan akun Anda.'] : ['Belum ada tugas', 'Penugasan dari admin akan muncul di sini.'];
+      q('#tg-isi').innerHTML = '<div class="tg-kosong">' + ikon('car') + '<b>' + k[0] + '</b>' + k[1] + '</div>';
+      return;
+    }
+    let n = 0;
+    q('#tg-isi').innerHTML = GRUP.map(g => {
+      const list = sisa.filter(t => kelompok(t) === g.k);
+      if (!list.length) return '';
+      const tampil = buka[g.k] ? list : list.slice(0, PER_GRUP);
+      return '<section class="tg-grup ' + g.k + '"><div class="tg-grup-judul">' + g.judul + '<span class="jml">' + list.length + '</span></div>' +
+        tampil.map(t => kartuItem(t, n++)).join('') +
+        (list.length > tampil.length ? '<button type="button" class="btn sekunder tg-lagi" data-lagi="' + g.k + '">Tampilkan ' + (list.length - tampil.length) + ' lainnya</button>' : '') + '</section>';
+    }).join('');
+  }
+
+  function galat(pesan, kode) {
+    R.classList.remove('memuat'); q('#tg-segarkan').classList.remove('putar');
+    if (data) { toast(pesan || 'Gagal memuat tugas.'); return; }
+    const el = q('#tg-info');
+    el.hidden = false; el.classList.add('galat');
+    el.textContent = kode === 'SESI' ? (pesan || 'Sesi berakhir. Silakan masuk lagi.') : (pesan || 'Tidak dapat terhubung ke server.');
+    q('#tg-isi').innerHTML = '<div class="tg-kosong">' + ikon('car') + '<b>Data belum dapat dimuat</b>Periksa koneksi, lalu klik Segarkan.</div>';
+  }
+
+  function terima(d) {
+    q('#tg-segarkan').classList.remove('putar');
+    if (!d || !d.ok) return galat(d && d.pesan, d && d.kode);
+    data = d; q('#tg-info').classList.remove('galat'); render();
+  }
+
+  async function muat() {
+    if (!data) R.classList.add('memuat');
+    try { await ambil('tugas', 'driverTugas', 45000, terima); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  // Modal membaca hari ini dari konteks ini. Status Berjalan dibaca dari status tugas itu sendiri.
+  const konteks = t => ({ hari: data.hari, state: t.kategori === 'berjalan' ? 'berjalan' : 'siap', saatIni: t });
+  const cari = id => data && data.tugas.find(t => String(t.id) === String(id));
+
+  function init() {
+    R.addEventListener('click', e => {
+      if (!data || typeof Modal === 'undefined') return;
+      const lagi = e.target.closest('[data-lagi]');
+      if (lagi) { buka[lagi.dataset.lagi] = true; render(); return; }
+      const a = e.target.closest('[data-aksi]');
+      if (a) {
+        const t = pilihFokus();
+        if (!t) return;
+        if (a.dataset.aksi === 'mulai') Modal.mulai(t, konteks(t));
+        else if (a.dataset.aksi === 'selesai') Modal.selesai(t, konteks(t));
+        else if (a.dataset.aksi === 'detail-fokus') Modal.detail(t, konteks(t));
+        return;
+      }
+      const it = e.target.closest('.tg-item');
+      if (it) { const t = cari(it.dataset.id); if (t) Modal.detail(t, konteks(t)); }
+    });
+    R.addEventListener('keydown', e => {
+      const it = e.target.closest('.tg-item');
+      if (it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); it.click(); }
+    });
+    q('#tg-segarkan').addEventListener('click', () => { q('#tg-segarkan').classList.add('putar'); delete App.cache.tugas; muat(); });
+  }
+
+  App.daftar('tugas', { init: init, tampil: muat, tinggal: hentikanTimer });
+})();
+</script>

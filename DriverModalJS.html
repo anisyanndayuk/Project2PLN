@@ -1,0 +1,338 @@
+<script>
+/* ============================================================
+   DriverModalJS.html : logika semua modal Driver
+   Modal yang tersedia (dipanggil dari DriverBerandaJS lewat Modal.jalankan):
+     1. Modal.detail(tugas, d)      Detail Tugas (varian tombol aktif / nonaktif)
+     2. Modal.mulai(tugas, d)       Form Mulai Perjalanan
+     3. Modal.selesai(tugas, d)     Form Selesai Perjalanan
+     4. Modal.ringkasan(hasil)      Ringkasan Perjalanan Selesai (muncul setelah laporan terkirim)
+     5. Modal.total(mode)           Total Perjalanan / Total Jarak Tempuh (filter bulan dan tahun)
+   Fungsi server (DriverPerjalanan.gs): driverSiapMulai, driverMulai, driverSelesai, driverRiwayatRingkas
+   Catatan: di level atas pakai var (bukan const/let), lihat penjelasan di DriverApp.html bagian [5b].
+   ============================================================ */
+var Modal = (function () {
+  const el = $('#mdl'), judulEl = $('#mdl-judul'), subEl = $('#mdl-sub'), isiEl = $('#mdl-isi'), aksiEl = $('#mdl-aksi');
+  const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  let sibuk = false, tmrTutup = null, tokenMuat = 0;
+
+  // ---------- Kerangka: buka, tutup, tombol ----------
+  // tombol: [{ teks, kelas ('utama' | 'sekunder' | ...), id, nonaktif, klik: fn }], catatan: teks kecil di bawah tombol
+  function buka(judul, sub, html, tombol, catatan) {
+    clearTimeout(tmrTutup);
+    sibuk = false;
+    judulEl.textContent = judul;
+    subEl.textContent = sub || ''; subEl.hidden = !sub;
+    isiEl.innerHTML = html;
+    isiEl.scrollTop = 0;
+    aksiEl.innerHTML = '';
+    (tombol || []).forEach(t => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn ' + (t.kelas || 'sekunder'); b.textContent = t.teks;
+      if (t.id) b.id = t.id;
+      b.disabled = !!t.nonaktif; if (t.nonaktif) b.dataset.nonaktif = '1';
+      if (t.klik) b.addEventListener('click', t.klik);
+      aksiEl.appendChild(b);
+    });
+    if (catatan) { const p = document.createElement('p'); p.className = 'mdl-catatan'; p.textContent = catatan; aksiEl.appendChild(p); }
+    el.classList.remove('tutup'); el.hidden = false;
+  }
+
+  function tutup() {
+    if (el.hidden) return;
+    el.classList.add('tutup');
+    tmrTutup = setTimeout(() => { el.hidden = true; el.classList.remove('tutup'); isiEl.innerHTML = ''; aksiEl.innerHTML = ''; }, 160);
+  }
+
+  // Semua tombol/aksi dikunci selama data dikirim ke server.
+  // Tombol X tetap bisa diklik: saat mengirim ia memberi tahu "sedang diproses" (bukan diam saja),
+  // dan setelah 45 detik tanpa jawaban server, kunci dilepas supaya modal tidak macet selamanya.
+  let tmrKunci = null;
+  function kunci(ya) {
+    sibuk = ya;
+    clearTimeout(tmrKunci);
+    aksiEl.querySelectorAll('button').forEach(b => { b.disabled = ya ? true : b.dataset.nonaktif === '1'; });
+    $('#mdl-x').classList.toggle('sibuk', ya);
+    if (ya) tmrKunci = setTimeout(() => {
+      sibuk = false; $('#mdl-x').classList.remove('sibuk');
+      aksiEl.querySelectorAll('button').forEach(b => { b.disabled = b.dataset.nonaktif === '1'; });
+      toast('Server belum menjawab. Anda bisa menutup lalu coba lagi.');
+    }, 45000);
+  }
+
+  function cobaTutup() { if (sibuk) toast('Data sedang dikirim, mohon tunggu sebentar…'); else tutup(); }
+  $('#mdl-x').addEventListener('click', cobaTutup);
+  el.addEventListener('mousedown', e => { if (e.target === el) cobaTutup(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el.hidden && !sibuk) tutup(); });
+
+  // Perbarui data setelah aksi (mulai / selesai) TANPA spinner: data Beranda dan Tugas diambil diam-diam di belakang modal,
+  // disimpan ke cache, lalu halaman yang sedang terbuka digambar ulang dari cache (instan, tidak ada kilasan spinner).
+  // Bila pengambilan gagal, halaman memuat sendiri seperti biasa (dengan spinner) agar pengguna tetap melihat data terbaru.
+  async function segarkanBeranda() {
+    delete App.cache.beranda; delete App.cache.tugas;
+    Object.keys(App.cache).forEach(k => { if (k.indexOf('riwayat') === 0) delete App.cache[k]; });   // riwayat ikut diperbarui setelah perjalanan selesai
+    try {
+      const hasil = await Promise.all([panggil('driverBeranda'), panggil('driverTugas')]);
+      if (hasil[0] && hasil[0].ok !== false) App.cache.beranda = { data: hasil[0], t: Date.now() };
+      if (hasil[1] && hasil[1].ok !== false) App.cache.tugas = { data: hasil[1], t: Date.now() };
+    } catch (e) { /* dibiarkan: halaman akan memuat sendiri di bawah */ }
+    const h = App.halaman[App.sekarang] || App.halaman.beranda;
+    if (h && h.tampil) h.tampil();
+  }
+
+  // ---------- Fungsi bantu ----------
+  const baris = (label, isi, kelas) => '<div' + (kelas ? ' class="' + kelas + '"' : '') + '><small>' + label + '</small>' + isi + '</div>';
+  const telp = s => { s = String(s || '').replace(/\D/g, ''); return s && s[0] === '8' ? '0' + s : s; };
+  const menit = m => { m = Math.max(0, Math.round(Number(m) || 0)); return m >= 60 ? Math.floor(m / 60) + ' j ' + (m % 60) + ' m' : m + ' menit'; };
+
+  function ringkasTugas(t) {
+    return '<div class="mdl-ringkas">' +
+      '<div><small>Tujuan</small><b>' + esc(t.tujuan || '-') + '</b></div>' +
+      '<div><small>Jadwal</small><b>' + esc(t.jam || '-') + ' WIB</b></div>' +
+      '<div class="mdl-baris-mobil"><b>' + esc(t.mobil || '-') + '</b>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></div>';
+  }
+
+  // Area unggah foto. Mengembalikan objek { ambil(): dataUrl|null, tandaiSalah(pesan) }
+  function areaFoto(induk, label, pesanKosong) {
+    induk.innerHTML =
+      '<span class="lbl">' + label + '</span>' +
+      '<input type="file" accept="image/*" capture="environment" hidden>' +
+      '<button type="button" class="foto-area">' + ikon('camera') + '<b>Klik atau ambil foto</b><span>Foto odometer harus terbaca jelas</span></button>' +
+      '<div class="foto-prev" hidden><img alt="Pratinjau foto odometer"><span></span><button type="button" class="btn sekunder kecil">Ganti foto</button></div>' +
+      '<div class="galat-teks">' + pesanKosong + '</div>';
+    const input = $('input', induk), area = $('.foto-area', induk), prev = $('.foto-prev', induk), img = $('img', prev), nama = $('span', prev);
+    let data = null;
+    const pilih = () => input.click();
+    area.addEventListener('click', pilih);
+    $('button', prev).addEventListener('click', pilih);
+    input.addEventListener('change', async () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      if (!/^image\//.test(f.type)) { salah('File harus berupa gambar.'); input.value = ''; return; }
+      try {
+        data = await kompres(f);
+        img.src = data; nama.textContent = f.name + ' (siap dikirim)';
+        prev.hidden = false; area.hidden = true; induk.classList.remove('salah');
+      } catch (e) { data = null; salah(e.message || 'Foto tidak dapat diproses.'); }
+    });
+    function salah(pesan) { $('.galat-teks', induk).textContent = pesan || pesanKosong; induk.classList.add('salah'); }
+    return { ambil: () => data, salah: salah };
+  }
+
+  // Kecilkan foto di browser (maks 1280 px, JPEG) supaya unggahan ke Apps Script cepat dan tidak gagal
+  function kompres(file) {
+    return new Promise((ok, gagal) => {
+      const r = new FileReader();
+      r.onerror = () => gagal(new Error('Foto tidak dapat dibaca.'));
+      r.onload = () => {
+        const im = new Image();
+        im.onerror = () => gagal(new Error('File bukan gambar yang valid.'));
+        im.onload = () => {
+          const s = Math.min(1, 1280 / Math.max(im.width, im.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+          c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+          ok(c.toDataURL('image/jpeg', 0.72));
+        };
+        im.src = r.result;
+      };
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Kolom angka: hanya digit
+  function kolomAngka(inp) { inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 7); }); }
+
+  const adaGalat = (box, pesan) => { box.textContent = pesan; box.classList.toggle('tampil', !!pesan); };
+
+  // ---------- 1. Detail Tugas ----------
+  function detail(t, d) {
+    const jalan = String(t.status || '').toLowerCase() === 'berjalan';
+    const hariH = !!t.tanggal && t.tanggal === d.hari;
+    const tel = telp(t.hp);
+    const html =
+      '<div class="mdl-kode"><span class="kode">#' + esc(t.id || '-') + '</span><span class="pill ' + (jalan ? 'jalan' : '') + '">' + (jalan ? 'Berjalan' : 'Disetujui') + '</span></div>' +
+      '<h4 class="mdl-judul-tugas">' + esc(t.tujuan || 'Tujuan belum diisi') + '</h4>' +
+      '<div class="mdl-grid">' +
+        baris('Tanggal', '<b>' + esc(t.tanggal ? tglPanjang(t.tanggal) : '-') + '</b>') +
+        baris('Jadwal berangkat', '<b>' + esc(t.jam || '-') + ' WIB</b>') +
+        baris('Estimasi tiba', '<b>' + esc(t.tiba || '-') + (t.tiba ? ' WIB' : '') + '</b>') +
+        baris('Jumlah penumpang', '<b>' + esc(t.penumpang != null && t.penumpang !== '' ? t.penumpang + ' orang' : '-') + '</b>') +
+        baris('Keperluan', esc(t.keperluan || '-'), 'lebar') +
+        baris('Pemohon', '<b>' + esc(t.pemohon || '-') + '</b>' + (t.bagian ? '<div>' + esc(t.bagian) + '</div>' : '')) +
+        baris('Nomor HP pemohon', tel ? '<a href="tel:' + esc(tel) + '">' + ikon('phone') + esc(tel) + '</a>' : '-') +
+        baris('Mobil', '<div class="mdl-baris-mobil"><b>' + esc(t.mobil || '-') + '</b>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div>', 'lebar') +
+      '</div>';
+    const utama = jalan
+      ? { teks: 'Selesai Perjalanan', kelas: 'utama', klik: () => selesai(t, d) }
+      : { teks: 'Mulai Perjalanan', kelas: 'utama', nonaktif: !hariH, klik: () => mulai(t, d) };
+    buka('Detail Tugas', '', html, [utama, { teks: 'Tutup', klik: tutup }], (!jalan && !hariH) ? 'Aktif pada hari keberangkatan' : '');
+  }
+
+  // ---------- 2. Form Mulai Perjalanan ----------
+  function mulai(t, d) {
+    if (!t) return;
+    const html =
+      ringkasTugas(t) +
+      '<div class="galat-umum" id="f-galat"></div>' +
+      '<div class="fm" id="f-foto"></div>' +
+      '<div class="fm" id="f-km"><label for="f-kmawal">Km awal</label>' +
+        '<div class="petunjuk" id="f-terakhir">Km terakhir mobil: memuat...</div>' +
+        '<input type="text" id="f-kmawal" inputmode="numeric" autocomplete="off" placeholder="Contoh: 42858">' +
+        '<div class="bantu">Sesuai angka di odometer. Jam berangkat tercatat otomatis.</div>' +
+        '<div class="galat-teks" id="f-km-galat">Km awal wajib diisi dengan angka.</div></div>';
+    buka('Mulai Perjalanan', '#' + (t.id || '-'), html, [
+      { teks: 'Batal', klik: tutup },
+      { teks: 'Mulai Perjalanan', kelas: 'utama', id: 'f-kirim', klik: kirim }
+    ]);
+    const foto = areaFoto($('#f-foto'), 'Foto Odometer Awal', 'Foto odometer awal wajib diunggah.');
+    const inp = $('#f-kmawal'), box = $('#f-km'), galat = $('#f-galat');
+    kolomAngka(inp);
+    inp.addEventListener('input', () => box.classList.remove('salah'));
+    let kmTerakhir = null;
+    panggil('driverSiapMulai', t.id).then(r => {
+      if (r && r.ok && r.kmTerakhir != null) { kmTerakhir = Number(r.kmTerakhir); $('#f-terakhir').textContent = 'Km terakhir mobil: ' + angka(kmTerakhir); }
+      else $('#f-terakhir').textContent = 'Km terakhir mobil: belum tercatat';
+    }).catch(() => { const p = $('#f-terakhir'); if (p) p.textContent = 'Km terakhir mobil: tidak dapat dimuat'; });
+
+    async function kirim() {
+      adaGalat(galat, '');
+      let ok = true;
+      if (!foto.ambil()) { foto.salah(); ok = false; }
+      const km = inp.value === '' ? null : parseInt(inp.value, 10);
+      if (km === null || isNaN(km)) { $('#f-km-galat').textContent = 'Km awal wajib diisi dengan angka.'; box.classList.add('salah'); ok = false; }
+      else if (kmTerakhir != null && km < kmTerakhir) { $('#f-km-galat').textContent = 'Km awal tidak boleh lebih kecil dari km terakhir mobil (' + angka(kmTerakhir) + ').'; box.classList.add('salah'); ok = false; }
+      if (!ok) return;
+      kunci(true); $('#f-kirim').textContent = 'Mengirim...';
+      try {
+        const r = await panggil('driverMulai', { idBooking: t.id, kmAwal: km, foto: foto.ambil() });
+        if (!r || !r.ok) throw new Error((r && r.pesan) || 'Gagal memulai perjalanan.');
+        tutup(); toast('Perjalanan dimulai. Hati-hati di jalan.'); segarkanBeranda();
+      } catch (e) {
+        kunci(false); $('#f-kirim').textContent = 'Mulai Perjalanan';
+        adaGalat(galat, e.message || 'Tidak dapat terhubung ke server.');
+      }
+    }
+  }
+
+  // ---------- 3. Form Selesai Perjalanan ----------
+  function selesai(t, d) {
+    if (!t) return;
+    const kmAwal = Number(t.kmAwal) || 0;
+    const html =
+      ringkasTugas(t) +
+      '<div class="galat-umum" id="f-galat"></div>' +
+      '<div class="fm" id="f-foto"></div>' +
+      '<div class="fm" id="f-km"><label for="f-kmakhir">Km akhir</label>' +
+        '<div class="petunjuk">Km awal perjalanan: ' + angka(kmAwal) + '</div>' +
+        '<input type="text" id="f-kmakhir" inputmode="numeric" autocomplete="off" placeholder="Contoh: 42936">' +
+        '<div class="galat-teks" id="f-km-galat">Km akhir wajib diisi dengan angka.</div></div>' +
+      '<div class="fm"><label for="f-catatan">Catatan kendala <span style="color:var(--abu);font-weight:500">(opsional)</span></label>' +
+        '<textarea id="f-catatan" maxlength="500" placeholder="Contoh: macet di Jl. Raya Singosari, mobil mengalami masalah"></textarea></div>';
+    buka('Selesai Perjalanan', '#' + (t.id || '-'), html, [
+      { teks: 'Batal', klik: tutup },
+      { teks: 'Kirim Laporan', kelas: 'utama', id: 'f-kirim', klik: kirim }
+    ]);
+    const foto = areaFoto($('#f-foto'), 'Foto Odometer Akhir', 'Foto odometer akhir wajib diunggah.');
+    const inp = $('#f-kmakhir'), box = $('#f-km'), galat = $('#f-galat');
+    kolomAngka(inp);
+    inp.addEventListener('input', () => box.classList.remove('salah'));
+
+    async function kirim() {
+      adaGalat(galat, '');
+      let ok = true;
+      if (!foto.ambil()) { foto.salah(); ok = false; }
+      const km = inp.value === '' ? null : parseInt(inp.value, 10);
+      if (km === null || isNaN(km)) { $('#f-km-galat').textContent = 'Km akhir wajib diisi dengan angka.'; box.classList.add('salah'); ok = false; }
+      else if (km < kmAwal) { $('#f-km-galat').textContent = 'Km akhir tidak boleh lebih kecil dari km awal'; box.classList.add('salah'); ok = false; }
+      if (!ok) return;
+      kunci(true); $('#f-kirim').textContent = 'Mengirim laporan...';
+      try {
+        const r = await panggil('driverSelesai', { idBooking: t.id, kmAkhir: km, catatan: $('#f-catatan').value.trim(), foto: foto.ambil() });
+        if (!r || !r.ok) throw new Error((r && r.pesan) || 'Gagal mengirim laporan.');
+        segarkanBeranda();
+        ringkasan(r, t);
+      } catch (e) {
+        kunci(false); $('#f-kirim').textContent = 'Kirim Laporan';
+        adaGalat(galat, e.message || 'Tidak dapat terhubung ke server.');
+      }
+    }
+  }
+
+  // ---------- 4. Ringkasan Perjalanan Selesai ----------
+  function ringkasan(r, t) {
+    const html =
+      '<div class="sukses"><div class="centang">' + ikon('check') + '</div><h4>Laporan terkirim</h4><p>Perjalanan ke ' + esc((t && t.tujuan) || 'tujuan') + ' sudah selesai. Terima kasih.</p></div>' +
+      '<div class="mdl-stat">' +
+        '<div><small>Jarak tempuh</small><b>' + angka(r.jarak) + ' KM</b></div>' +
+        '<div><small>Durasi</small><b>' + esc(menit(r.durasiMenit)) + '</b></div>' +
+        '<div><small>Jam berangkat</small><b>' + esc(r.mulai || '-') + ' WIB</b></div>' +
+        '<div><small>Jam tiba</small><b>' + esc(r.selesai || '-') + ' WIB</b></div></div>';
+    buka('Perjalanan Selesai', '', html, [{ teks: 'Kembali ke Beranda', kelas: 'utama', klik: () => { tutup(); if (App.sekarang !== 'beranda') Router.pindah('beranda', !!(App.cache.beranda && App.cache.beranda.data)); } }]);
+  }
+
+  // ---------- 5. Total Perjalanan / Total Jarak Tempuh ----------
+  // mode: 'total' (Total Perjalanan) atau 'jarak' (Total Jarak Tempuh). Tampilannya sama, hanya angka utamanya yang berbeda.
+  function total(mode) {
+    const jarak = mode === 'jarak';
+    const tahunIni = new Date().getFullYear();
+    const html =
+      '<div class="mdl-filter">' +
+        '<div><label for="t-bulan">Bulan</label><select id="t-bulan"><option value="0">Semua bulan</option>' +
+          BULAN.map((b, i) => '<option value="' + (i + 1) + '">' + b + '</option>').join('') + '</select></div>' +
+        '<div><label for="t-tahun">Tahun</label><select id="t-tahun"><option value="0">Semua tahun</option>' +
+          '<option value="' + tahunIni + '">' + tahunIni + '</option></select></div></div>' +
+      '<div class="mdl-ikhtisar" id="t-ikhtisar"></div>' +
+      '<div id="t-daftar"><div class="mdl-memuat">Memuat data...</div></div>';
+    buka(jarak ? 'Total Jarak Tempuh' : 'Total Perjalanan', jarak ? 'Berdasarkan catatan odometer' : 'Perjalanan yang sudah selesai', html, [{ teks: 'Tutup', klik: tutup }]);
+    const bulan = $('#t-bulan'), tahun = $('#t-tahun');
+    let tahunDiisi = false;
+    bulan.addEventListener('change', muat); tahun.addEventListener('change', muat);
+
+    async function muat() {
+      const token = ++tokenMuat;
+      $('#t-daftar').innerHTML = '<div class="mdl-memuat">Memuat data...</div>';
+      try {
+        const r = await panggil('driverRiwayatRingkas', Number(bulan.value), Number(tahun.value));
+        if (token !== tokenMuat || el.hidden) return;
+        if (!r || !r.ok) throw new Error((r && r.pesan) || 'Data tidak dapat dimuat.');
+        if (!tahunDiisi && r.tahun && r.tahun.length) {          // isi pilihan tahun dari data yang ada
+          tahunDiisi = true;
+          tahun.innerHTML = '<option value="0">Semua tahun</option>' + r.tahun.map(y => '<option value="' + y + '">' + y + '</option>').join('');
+        }
+        const kartuJml = '<div class="' + (jarak ? '' : 'utama') + '"><small>Jumlah perjalanan</small><b>' + angka(r.jumlah) + '</b><em>perjalanan</em></div>';
+        const kartuJrk = '<div class="' + (jarak ? 'utama' : '') + '"><small>Total jarak</small><b>' + angka(r.jarak) + '</b><em>KM</em></div>';
+        $('#t-ikhtisar').innerHTML = jarak ? kartuJrk + kartuJml : kartuJml + kartuJrk;
+        $('#t-daftar').innerHTML = r.daftar && r.daftar.length
+          ? '<div class="mdl-daftar">' + r.daftar.map(x =>
+              '<div class="t"><div><b>' + esc(x.tujuan || '-') + '</b><small>' + esc(x.tanggal ? tglPendek(x.tanggal) : '-') + ' · ' + esc(menit(x.durasiMenit)) + '</small></div>' +
+              '<div class="km">' + angka(x.jarak) + ' KM<small>' + angka(x.kmAwal) + ' - ' + angka(x.kmAkhir) + '</small></div></div>').join('') + '</div>' +
+            (r.jumlah > r.daftar.length ? '<p class="mdl-memuat">Menampilkan ' + r.daftar.length + ' perjalanan terbaru.</p>' : '')
+          : '<div class="kosong kecil">' + ikon('history') + '<p>Belum ada perjalanan pada periode ini.</p></div>';
+      } catch (e) {
+        if (token !== tokenMuat) return;
+        $('#t-ikhtisar').innerHTML = '';
+        $('#t-daftar').innerHTML = '<div class="kosong kecil"><b>Data belum dapat dimuat</b><p>' + esc(e.message || 'Periksa koneksi, lalu coba lagi.') + '</p>' +
+          '<button type="button" class="btn sekunder kecil" id="t-ulang">Coba lagi</button></div>';
+        $('#t-ulang').addEventListener('click', muat);
+      }
+    }
+    muat();
+  }
+
+  // ---------- Pintu masuk dari Beranda ----------
+  // aksi: 'detail' | 'mulai' | 'selesai' | 'total' | 'jarak' | 'rating'; i: indeks tugas mendatang (untuk 'detail')
+  function jalankan(aksi, i, d) {
+    if (!d) return;
+    const t = (aksi === 'detail' && i != null && i !== '') ? d.mendatang[Number(i)] : d.saatIni;
+    if (aksi === 'detail') return t ? detail(t, d) : undefined;
+    if (aksi === 'mulai') return mulai(d.saatIni, d);
+    if (aksi === 'selesai') return selesai(d.saatIni, d);
+    if (aksi === 'total') return total('total');
+    if (aksi === 'jarak') return total('jarak');
+    if (aksi === 'rating') return Router.pindah('rating');
+    toast('Fitur ini dibuat pada tahap berikutnya');
+  }
+
+  return { buka: buka, tutup: tutup, detail: detail, mulai: mulai, selesai: selesai, ringkasan: ringkasan, total: total, jalankan: jalankan };
+})();
+</script>

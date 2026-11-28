@@ -74,8 +74,68 @@
 .bs-batal-box textarea{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;resize:vertical;min-height:70px}
 .bs-batal-box .aksi{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
 @media(max-width:560px){.bs-grid{grid-template-columns:1fr}}
+
+/* ===== Responsif HP (tambahan; aturan di atas tidak diubah) ===== */
+@media(max-width:768px){
+  .bs-card{padding:16px}
+  .bs-head h3{font-size:16px}
+  .bs-head .bs-btn{width:100%;min-height:42px}
+  .bs-tab{flex-wrap:nowrap;overflow-x:auto;margin-left:-4px;margin-right:-4px;padding:0 4px 4px;scrollbar-width:none}
+  .bs-tab::-webkit-scrollbar{display:none}
+  .bs-chip{flex-shrink:0;white-space:nowrap}
+  .bs-cari{font-size:16px}                        /* 16px supaya iPhone tidak zoom otomatis */
+  .bs-foot{justify-content:center;text-align:center}
+  .bs-hal{flex-wrap:wrap;justify-content:center}
+}
+
+/* Tabel jadi kartu per baris di layar kecil */
+@media(max-width:700px){
+  .bs-tabel{min-width:0}
+  .bs-tabel,.bs-tabel tbody,.bs-tabel tr,.bs-tabel td{display:block;width:100%}
+  .bs-tabel thead{display:none}
+  .bs-tabel tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;align-items:start;padding:14px 8px;border-bottom:1px solid #eef2f6;border-radius:10px}
+  .bs-tabel tbody tr:last-child{border-bottom:0}
+  .bs-tabel td{padding:0;border:0}
+  .bs-tabel td:nth-child(1){grid-area:1/1}                   /* tanggal & waktu */
+  .bs-tabel td:nth-child(5){grid-area:1/2;text-align:right}   /* status */
+  .bs-tabel td:nth-child(2){grid-area:2/1/3/3}                /* tujuan & keperluan */
+  .bs-tabel td:nth-child(3){grid-area:3/1}                    /* mobil */
+  .bs-tabel td:nth-child(4){grid-area:3/2}                    /* driver */
+  .bs-tabel td:nth-child(6){grid-area:4/1/5/3;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}   /* aksi */
+  .bs-tabel td:nth-child(6)>*{flex:1;justify-content:center;min-height:40px}
+  .bs-tabel td:nth-child(3)::before,.bs-tabel td:nth-child(4)::before{display:block;margin-bottom:2px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#94a3b8}
+  .bs-tabel td:nth-child(3)::before{content:"Mobil"}
+  .bs-tabel td:nth-child(4)::before{content:"Driver"}
+}
+
+/* Pop up detail di HP */
+@media(max-width:560px){
+  .bs-overlay{padding:10px}
+  .bs-modal{max-height:92vh}
+  .bs-m-head{padding:16px 18px 12px}
+  .bs-m-judul{font-size:16px}
+  .bs-m-body{padding:14px 18px}
+  .bs-m-foot{padding:12px 18px;flex-wrap:wrap}
+  .bs-m-foot .bs-btn{flex:1;min-height:42px}
+  .bs-kendaraan{flex-wrap:wrap}
+  .bs-telp{width:40px;height:40px}
+  .bs-batal-box textarea{font-size:16px}
+  .bs-batal-box .aksi .bs-btn{flex:1;min-height:42px}
+}
+
 </style>
 
+<div id="bsLoading" class="app-loading-container">
+  <div class="loading-card">
+    <div class="brand-spinner"><div class="spinner-ring"></div></div>
+    <div class="loading-text">
+      <h3>Memuat Booking...</h3>
+      <p>Mohon tunggu sebentar</p>
+    </div>
+  </div>
+</div>
+
+<div id="bsIsi" style="display:none">
 <div class="bs-card">
   <div class="bs-head">
     <div>
@@ -98,6 +158,8 @@
     <span id="bsInfo"></span>
     <div class="bs-hal" id="bsHal"></div>
   </div>
+</div>
+
 </div>
 
 <div class="bs-overlay" id="bsModal">

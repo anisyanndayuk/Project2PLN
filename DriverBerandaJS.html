@@ -44,14 +44,18 @@
       (jalan ? '' : '<p class="cat">Tombol aktif pada hari keberangkatan</p>');
   }
 
+  const BULAN = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+  const blokTgl = t => t.tanggal ? '<div class="m-dt"><b>' + Number(t.tanggal.slice(8, 10)) + '</b><span>' + BULAN[Number(t.tanggal.slice(5, 7)) - 1] + '</span><small>' + esc(t.jam || '') + '</small></div>' : '<div class="m-dt"><b>-</b></div>';
+
   function daftarMendatang(d) {
     q('#m-jumlah').textContent = d.mendatang.length + ' tugas';
-    q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map(t =>
-      '<button class="m-item" data-aksi="detail"><div class="m-tgl"><span>' + esc(tglPendek(t.tanggal)) + ', ' + esc(t.jam) + ' WIB</span><span class="pill">Disetujui</span></div>' +
-      '<b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
-      '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span><span>' + esc(t.mobil) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></button>'
+    q('#m-list').innerHTML = d.mendatang.length ? d.mendatang.map((t, i) =>
+      '<button class="m-item" data-aksi="detail" data-i="' + i + '">' + blokTgl(t) +
+      '<div class="m-isi"><b>' + esc(t.tujuan) + '</b><p>' + esc(t.keperluan) + '</p>' +
+      '<div class="m-bawah"><span>' + esc(t.pemohon) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div></div></button>'
     ).join('') : '<div class="kosong kecil">' + ikon('calendar') + '<p>Belum ada tugas mendatang.</p></div>';
     q('#m-semua').textContent = 'Lihat semua tugas (' + d.totalTugas + ')';
+    q('#m-semua').dataset.hal = 'tugas';
   }
 
   function render(d) {
@@ -59,23 +63,34 @@
     terakhir = d;
     R.classList.remove('memuat');
     q('#b-galat').hidden = true;
-    q('#b-info').hidden = d.profilDriverAda;
+    const pn = d.penugasan || {}, bn = q('#b-info'), pesan = !pn.bisa ? pn.alasan : pn.peringatan;
+    if (pesan) bn.textContent = pesan;                       // teks banner dari server (belum terdaftar / Nonaktif / SIM)
+    bn.classList.toggle('galat', !!pesan && !pn.bisa);
+    bn.hidden = !pesan;
     Shell.isiHeader(d.pengguna);
 
     q('#b-halo').textContent = 'Halo, ' + d.pengguna.nama;
-    q('#b-status-driver').textContent = d.statusDriver ? 'Driver ' + d.statusDriver : 'Driver';
+    q('#b-status-driver').textContent = [d.jenisDriver ? 'Driver ' + d.jenisDriver : 'Driver', d.statusDriver].filter(Boolean).join(' · ');
     q('#b-status-teks').textContent = { ada: 'Ada ' + d.jumlahHariIni + ' tugas hari ini', bertugas: 'Sedang dalam perjalanan', kosong: 'Belum ada tugas hari ini' }[d.statusHariIni];
     R.querySelectorAll('#b-chips span').forEach(c => c.classList.toggle('on', c.dataset.k === d.statusHariIni));
 
-    q('#s-total').textContent = angka(d.total);
-    q('#s-total-ket').textContent = d.total ? 'Seluruh perjalanan. Klik untuk filter bulan dan tahun.' : 'Belum ada perjalanan selesai.';
-    q('#s-jarak').textContent = angka(d.jarak);
-    q('#s-rata').textContent = d.total ? 'Rata-rata ' + angka(d.rata) + ' KM / perjalanan' : 'Belum ada data jarak';
+    q('#s-total').textContent = angka(d.bulanIni || 0);
+    q('#s-total-ket').textContent = d.bulanIni ? 'Total ' + angka(d.total) + ' perjalanan' : (d.total ? 'Belum ada bulan ini' : 'Belum ada perjalanan');
+    q('#s-jarak').textContent = angka(d.jarakBulan || 0);
+    q('#s-rata').textContent = d.jarak ? 'Total ' + angka(d.jarak) + ' KM' : 'Belum ada data jarak';
+    // Kartu SIM: hijau aman, kuning <=30 hari, merah sudah lewat, abu belum tercatat
+    const n = d.simSisaHari, sk = n == null ? 'abu' : n < 0 ? 'merah' : n <= 30 ? 'kuning' : 'hijau';
+    q('#s-sim').textContent = n == null ? '-' : angka(Math.abs(n));
+    q('#s-sim-sat').textContent = n == null ? '' : n < 0 ? 'hari lewat' : n === 0 ? '' : 'hari lagi';
+    q('#s-sim-ket').className = 'pill-ket ' + sk;
+    q('#s-sim-ket').textContent = n == null ? 'Belum tercatat' : n < 0 ? 'SIM sudah kedaluwarsa' : n === 0 ? 'Berakhir hari ini' : n <= 30 ? 'Segera perpanjang' : 'Masih aman';
+    q('#s-sim-ikon').className = 'ikon ' + (sk === 'abu' ? 'kuning' : sk);
     q('#s-rating').textContent = d.rating == null ? '-' : d.rating.toFixed(1);
     q('#s-bintang').innerHTML = bintang(d.rating || 0);
-    q('#s-ulasan').textContent = d.ulasan ? 'dari ' + angka(d.ulasan) + ' ulasan penumpang' : 'Belum ada ulasan.';
+    q('#s-ulasan').textContent = d.ulasan ? angka(d.ulasan) + ' ulasan' : 'Belum ada ulasan';
 
     q('#b-tugas').innerHTML = kartuTugas(d);
+    q('#b-tugas').classList.toggle('berjalan', d.state === 'berjalan');
     daftarMendatang(d);
     jalankanTimer(d.state === 'berjalan' && d.saatIni ? d.saatIni.mulai : '');
   }
@@ -99,21 +114,15 @@
     catch (e) { galat(e && e.message); }
   }
 
+  // Kartu statistik dijadikan tombol: Total perjalanan dan Total jarak membuka modal, Rating menuju halaman Rating Saya
   function init() {
-  R.addEventListener('click', e => {
-    if (e.target.closest('#b-masuk')) {
-      e.preventDefault();
-      try { sessionStorage.removeItem('sid'); } catch (x) {}
-      google.script.run
-        .withSuccessHandler(h => { document.open(); document.write(h); document.close(); })
-        .bukaLogin();
-      return;
-    }
-    const a = e.target.closest('[data-aksi]');
-    if (!a) return;
-    if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }
-    else toast('Fitur ini dibuat pada tahap berikutnya');
-  });
+    R.addEventListener('click', e => {
+      const a = e.target.closest('[data-aksi]');
+      if (!a) return;
+      if (a.dataset.aksi === 'ulang') { delete App.cache.beranda; muat(); }
+      else if (terakhir && typeof Modal !== 'undefined') Modal.jalankan(a.dataset.aksi, a.dataset.i, terakhir);
+      else toast('Data belum dimuat. Coba lagi sebentar.');
+    });
   }
 
   App.daftar('beranda', { init: init, tampil: muat, tinggal: () => clearInterval(timer) });

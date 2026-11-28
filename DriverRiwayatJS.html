@@ -1,0 +1,149 @@
+<script>
+// ==========================================
+// Riwayat Perjalanan: daftar perjalanan selesai milik driver, dengan filter bulan dan tahun.
+// Data dari server: driverRiwayat(sid, bulan, tahun). Tiap kombinasi filter punya cache sendiri ('riwayat-<bulan>-<tahun>').
+// Klik perjalanan membuka detail lewat Modal.buka (DriverModalJS.html).
+// ==========================================
+(function () {
+  const R = $('#h-riwayat'), q = s => $(s, R);
+  const NAMA_BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const PER_HALAMAN = 20;                  // perjalanan yang ditampilkan sekaligus; sisanya lewat tombol "Tampilkan lainnya"
+  let data = null, tampilBanyak = PER_HALAMAN, siap = false, kunciAktif = '';
+
+  const menit = m => { m = Math.max(0, Math.round(Number(m) || 0)); return m >= 60 ? Math.floor(m / 60) + ' j ' + (m % 60) + ' m' : m + ' menit'; };
+  const baris = (label, isi, kelas) => '<div' + (kelas ? ' class="' + kelas + '"' : '') + '><small>' + label + '</small>' + isi + '</div>';
+
+  // ---------- Filter ----------
+  function isiFilter(hari, tahunData) {
+    const sb = q('#rw-bulan'), st = q('#rw-tahun');
+    if (!sb.options.length) {
+      sb.innerHTML = '<option value="0">Semua bulan</option>' + NAMA_BULAN.map((n, i) => '<option value="' + (i + 1) + '">' + n + '</option>').join('');
+    }
+    const pilihTh = st.value;
+    const th = Array.from(new Set([Number(hari.slice(0, 4))].concat(tahunData || []))).sort((a, b) => b - a);
+    st.innerHTML = '<option value="0">Semua tahun</option>' + th.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+    st.value = pilihTh || String(hari.slice(0, 4));
+    if (!st.value) st.value = '0';
+  }
+  const filter = () => ({ bulan: Number(q('#rw-bulan').value) || 0, tahun: Number(q('#rw-tahun').value) || 0 });
+
+  // ---------- Tampilan ----------
+  function ringkas() {
+    q('#rw-ringkas').innerHTML =
+      '<div><small>Total perjalanan</small><b>' + angka(data.jumlah) + '<span>perjalanan</span></b></div>' +
+      '<div><small>Total jarak</small><b>' + angka(data.jarak) + '<span>km</span></b></div>' +
+      '<div><small>Rata-rata durasi</small><b>' + (data.rataDurasi ? esc(menit(data.rataDurasi)) : '-') + '</b></div>';
+  }
+
+  function kartu(t, n) {
+    return '<div class="rw-item" role="button" tabindex="0" data-id="' + esc(t.id) + '" data-tgl="' + esc(t.tanggal) + '" style="animation-delay:' + Math.min(n, 10) * 30 + 'ms">' +
+      '<div class="rw-jam"><b>' + esc(t.jamMulai || '-') + ' - ' + esc(t.jamSelesai || '-') + '</b><small>WIB</small></div>' +
+      '<div><div class="rw-judul">' + esc(t.tujuan || 'Tujuan tidak tercatat') + '</div>' +
+        (t.keperluan ? '<div class="rw-ket">' + esc(t.keperluan) + '</div>' : '') +
+        '<div class="rw-chip"><span class="km">' + ikon('route') + angka(t.jarak) + ' km</span><span>' + ikon('clock') + esc(menit(t.durasiMenit)) + '</span>' +
+        '<span>' + ikon('user') + esc(t.pemohon) + '</span>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') +
+        (t.catatan ? '<span class="cat">Ada catatan</span>' : '') + '</div></div>' +
+      '<div class="rw-kanan">' + ikon('arrow') + '</div></div>';
+  }
+
+  function render() {
+    q('#rw-segarkan').classList.remove('putar');
+    isiFilter(data.hari, data.tahun);
+    ringkas();
+    const f = filter();
+    q('#rw-sub').textContent = (f.bulan ? NAMA_BULAN[f.bulan - 1] + ' ' : '') + (f.tahun ? f.tahun : f.bulan ? '' : 'Semua waktu') +
+      (data.jumlah ? ' · ' + data.jumlah + ' perjalanan selesai' : '');
+
+    const isi = q('#rw-isi');
+    if (!data.profilDriverAda) {
+      isi.innerHTML = '<div class="rw-kosong">' + ikon('car') + '<b>Data driver belum tersedia</b>Hubungi admin untuk mendaftarkan akun Anda.</div>'; return;
+    }
+    if (!data.daftar.length) {
+      const semua = f.bulan || f.tahun;
+      isi.innerHTML = '<div class="rw-kosong">' + ikon('history') + '<b>Belum ada perjalanan selesai</b>' +
+        (semua ? 'Tidak ada perjalanan pada periode ini.' : 'Perjalanan yang sudah Anda selesaikan akan tampil di sini.') +
+        (semua ? '<br><button type="button" class="btn utama" data-semua="1">Lihat semua waktu</button>' : '') + '</div>'; return;
+    }
+    const tampil = data.daftar.slice(0, tampilBanyak);
+    let n = 0, html = '', tgl = '';
+    tampil.forEach(t => {
+      if (t.tanggal !== tgl) { html += (tgl ? '</section>' : '') + '<section class="rw-grup"><div class="rw-grup-judul">' + esc(tglPanjang(t.tanggal)) + '</div>'; tgl = t.tanggal; }
+      html += kartu(t, n++);
+    });
+    html += '</section>';
+    if (data.daftar.length > tampil.length) html += '<button type="button" class="btn sekunder rw-lagi" data-lagi="1">Tampilkan ' + (data.daftar.length - tampil.length) + ' lainnya</button>';
+    if (data.terpotong) html += '<p class="rw-kosong" style="padding:14px;border-style:solid">Hanya 100 perjalanan terbaru yang ditampilkan. Persempit dengan filter bulan atau tahun.</p>';
+    isi.innerHTML = html;
+  }
+
+  function detail(t) {
+    const html =
+      '<div class="mdl-kode"><span class="kode">#' + esc(t.id) + '</span><span class="pill">Selesai</span></div>' +
+      '<h4 class="mdl-judul-tugas">' + esc(t.tujuan || 'Tujuan tidak tercatat') + '</h4>' +
+      '<div class="mdl-grid">' +
+        baris('Tanggal', '<b>' + esc(tglPanjang(t.tanggal)) + '</b>') +
+        baris('Waktu', '<b>' + esc(t.jamMulai || '-') + ' - ' + esc(t.jamSelesai || '-') + ' WIB</b>') +
+        baris('Durasi', '<b>' + esc(menit(t.durasiMenit)) + '</b>') +
+        baris('Jarak tempuh', '<b>' + angka(t.jarak) + ' km</b>') +
+        baris('Km awal', '<b>' + angka(t.kmAwal) + '</b>') +
+        baris('Km akhir', '<b>' + angka(t.kmAkhir) + '</b>') +
+        baris('Pemohon', '<b>' + esc(t.pemohon) + '</b>' + (t.bagian ? '<div style="color:var(--abu)">' + esc(t.bagian) + '</div>' : '')) +
+        baris('Mobil', '<div class="mdl-baris-mobil"><b>' + esc(t.mobil || '-') + '</b>' + (t.plat ? '<span class="plat">' + esc(t.plat) + '</span>' : '') + '</div>') +
+        baris('Keperluan', esc(t.keperluan || '-'), 'lebar') +
+        (t.catatan ? baris('Catatan kendala', esc(t.catatan), 'lebar') : '') +
+      '</div>';
+    Modal.buka('Detail Perjalanan', tglPendek(t.tanggal), html, [{ teks: 'Tutup', klik: Modal.tutup }]);
+  }
+
+  // ---------- Muat data ----------
+  function galat(pesan, kode) {
+    q('#rw-segarkan').classList.remove('putar');
+    if (data) { toast(pesan || 'Gagal memuat riwayat.'); return; }
+    q('#rw-isi').innerHTML = '<div class="rw-kosong">' + ikon('car') + '<b>Data belum dapat dimuat</b>' +
+      esc(kode === 'SESI' ? (pesan || 'Sesi berakhir. Silakan masuk lagi.') : (pesan || 'Periksa koneksi, lalu klik Segarkan.')) + '</div>';
+  }
+
+  // saatData bisa terpanggil dua kali (cache lalu data baru); abaikan balasan filter lama bila filter sudah berganti
+  const terima = kunci => d => {
+    if (kunci !== kunciAktif) return;
+    if (!d || !d.ok) return galat(d && d.pesan, d && d.kode);
+    data = d; render();
+  };
+
+  async function muat() {
+    if (!siap) return;
+    const f = filter();
+    kunciAktif = 'riwayat-' + f.bulan + '-' + f.tahun;
+    tampilBanyak = PER_HALAMAN;
+    try { await ambil(kunciAktif, 'driverRiwayat', 60000, terima(kunciAktif), [f.bulan, f.tahun]); }
+    catch (e) { galat(e && e.message); }
+  }
+
+  function init() {
+    // Isi awal filter dari hari ini (Jakarta): bulan ini, tahun ini
+    const sekarang = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+    isiFilter(sekarang, []);
+    q('#rw-bulan').value = String(Number(sekarang.slice(5, 7)));
+    siap = true;
+
+    q('#rw-bulan').addEventListener('change', muat);
+    q('#rw-tahun').addEventListener('change', muat);
+    q('#rw-segarkan').addEventListener('click', () => { q('#rw-segarkan').classList.add('putar'); delete App.cache[kunciAktif]; muat(); });
+    R.addEventListener('click', e => {
+      if (e.target.closest('[data-lagi]')) { tampilBanyak += PER_HALAMAN; render(); return; }
+      if (e.target.closest('[data-semua]')) { q('#rw-bulan').value = '0'; q('#rw-tahun').value = '0'; muat(); return; }
+      const it = e.target.closest('.rw-item');
+      if (it && data && typeof Modal !== 'undefined') {
+        const t = data.daftar.find(x => x.id === it.dataset.id && x.tanggal === it.dataset.tgl);
+        if (t) detail(t);
+      }
+    });
+    R.addEventListener('keydown', e => {
+      const it = e.target.closest('.rw-item');
+      if (it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); it.click(); }
+    });
+  }
+
+  App.daftar('riwayat', { init: init, tampil: muat });
+})();
+</script>

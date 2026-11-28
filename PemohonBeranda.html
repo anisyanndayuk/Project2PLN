@@ -82,12 +82,110 @@ td b{font-weight:600;display:block}
 .err{padding:14px;border-radius:12px;background:#FEE2E2;color:#B91C1C;font-size:13.5px;line-height:1.5}
 .err button{margin-top:8px}
 
+/* ===== Pop up penilaian ===== */
+.bm-overlay{position:fixed;inset:0;z-index:2100;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.5);backdrop-filter:blur(2px)}
+.bm-overlay.on{display:flex}
+.bm-modal{width:min(520px,100%);max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.3);animation:bmMuncul .2s ease}
+@keyframes bmMuncul{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.bm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 24px 14px;border-bottom:1px solid #eef2f6}
+.bm-judul{font-size:18px;font-weight:700;color:#0b5c85}
+.bm-sub{margin-top:4px;font-size:13px;color:#64748b}
+.bm-x{border:0;background:none;font-size:26px;line-height:1;color:#64748b;cursor:pointer}
+.bm-body{padding:18px 24px 22px;overflow-y:auto}
+.bm-ringkas{background:#f8fafc;border-radius:12px;padding:12px 16px;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:6px}
+.bm-ringkas .l{grid-column:1/-1}
+.bm-ringkas small{display:block;color:#64748b;font-size:11px;margin-bottom:2px}
+.bm-ringkas span{color:#0f172a;font-weight:600}
+.bm-plat{display:inline-block;margin-left:6px;background:#1e293b;color:#fff;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;vertical-align:1px}
+.bm-lb{font-size:12px;font-weight:700;color:#334155;margin:12px 0 6px}
+.bm-lb small{font-weight:500;color:#94a3b8}
+.bm-stars{display:flex;align-items:center;gap:2px}
+.bm-star{border:0;background:none;padding:0 1px;font-size:28px;line-height:1;color:#d1d5db;cursor:pointer;transition:transform .1s}
+.bm-star:hover{transform:scale(1.15)}
+.bm-star.on{color:#f59e0b}
+.bm-lbl{margin-left:10px;font-size:12px;font-weight:600;color:#64748b}
+.bm-kom{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;resize:vertical;min-height:84px;background:#f8fafc}
+.bm-kom:focus{outline:0;border-color:#1d6fa5;background:#fff}
+.bm-err{min-height:16px;margin-top:6px;font-size:12px;color:#dc2626}
+.bm-aksi{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.bm-btn{border:1px solid #dbe2ea;background:#fff;border-radius:10px;padding:10px 16px;font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer}
+.bm-kirim{display:inline-flex;align-items:center;gap:8px;border:0;background:#f9e326;color:#1e293b;border-radius:10px;padding:10px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.bm-kirim:hover:not(:disabled){background:#e9d519}
+.bm-kirim:disabled{opacity:.6;cursor:default}
+@media(max-width:560px){.bm-ringkas{grid-template-columns:1fr}}
+
 /* ===== Responsif ===== */
 @media(max-width:1100px){.cols{grid-template-columns:1fr}}
 @media(max-width:900px){.stats{grid-template-columns:1fr}.rgrid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Responsif HP (tambahan; aturan di atas tidak diubah) ===== */
+@media(max-width:768px){
+  .greet{padding:18px;gap:14px}
+  .greet h1{font-size:20px}
+  .greet .btn-y{width:100%}
+  .stat{padding:14px 16px}
+  .stat .n{font-size:26px}
+  .panel{padding:16px}
+  .ph .r{width:100%;flex-direction:column;align-items:stretch;gap:10px}
+  .tabs button{flex:1;min-height:34px}
+  .alink{text-align:right}
+  .pg{justify-content:center;text-align:center}
+  .pg div{width:100%}
+  .pg button{flex:1;min-height:38px}
+  .tel{width:38px;height:38px}
+  .rc{padding:14px}
+  .stars button{font-size:34px;padding:0 4px}
+}
+
+/* Tabel Booking Terbaru jadi kartu per baris di layar kecil */
+@media(max-width:640px){
+  table{min-width:0}
+  table,tbody,tr,td{display:block;width:100%}
+  thead{display:none}
+  tbody tr{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;padding:14px 0;border-bottom:1px solid #F3F4F6}
+  tbody tr:last-child{border-bottom:0}
+  td{padding:0;border:0}
+  td:nth-child(1),td:nth-child(2){grid-column:1/-1}
+  td:nth-child(3){grid-column:1}
+  td:nth-child(4){grid-column:2}
+}
+
+@media(max-width:480px){
+  .greet{padding:16px}
+  .greet p{font-size:12.5px}
+  .when{max-width:none}
+  .times b{font-size:17px}
+  .tbox,.vbox{padding:12px}
+  .ok{font-size:12.5px;padding:12px}
+}
+
+/* Pop up penilaian di HP */
+@media(max-width:560px){
+  .bm-overlay{padding:10px}
+  .bm-head{padding:16px 18px 12px}
+  .bm-judul{font-size:16px}
+  .bm-body{padding:14px 18px 18px}
+  .bm-stars{flex-wrap:wrap}
+  .bm-star{font-size:34px;padding:0 3px}
+  .bm-lbl{flex-basis:100%;margin:6px 0 0}
+  .bm-kom{font-size:16px}   /* 16px supaya iPhone tidak zoom otomatis saat mengetik */
+  .bm-aksi .bm-btn,.bm-aksi .bm-kirim{flex:1;justify-content:center;min-height:42px}
+}
+
 </style>
 
+<div id="bpLoading" class="app-loading-container">
+  <div class="loading-card">
+    <div class="brand-spinner"><div class="spinner-ring"></div></div>
+    <div class="loading-text">
+      <h3>Memuat Beranda...</h3>
+      <p>Mohon tunggu sebentar</p>
+    </div>
+  </div>
+</div>
+
+<div id="bpIsi" style="display:none">
 <section class="greet">
   <div>
     <h1><span id="bpSapa">Halo!</span><span class="tg" id="bpBagian"></span></h1>
@@ -141,3 +239,42 @@ td b{font-weight:600;display:block}
   </div>
   <div id="bpPerluNilai"><div class="empty">Memuat...</div></div>
 </section>
+</div>
+
+<div class="bm-overlay" id="bmModal">
+  <div class="bm-modal" role="dialog" aria-modal="true" aria-labelledby="bmJudul">
+    <div class="bm-head">
+      <div>
+        <div class="bm-judul" id="bmJudul">Beri Penilaian</div>
+        <div class="bm-sub" id="bmSub"></div>
+      </div>
+      <button type="button" class="bm-x" id="bmTutup" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="bm-body">
+      <div class="bm-ringkas">
+        <div class="l"><small>Tujuan</small><span id="bmTujuan">-</span></div>
+        <div><small>Mobil</small><span id="bmMobil">-</span></div>
+        <div><small>Driver</small><span id="bmDriver">-</span></div>
+      </div>
+
+      <div class="bm-lb">Rating pengemudi &amp; armada</div>
+      <div class="bm-stars" id="bmStars">
+        <button type="button" class="bm-star" data-n="1" aria-label="1 bintang">&#9733;</button>
+        <button type="button" class="bm-star" data-n="2" aria-label="2 bintang">&#9733;</button>
+        <button type="button" class="bm-star" data-n="3" aria-label="3 bintang">&#9733;</button>
+        <button type="button" class="bm-star" data-n="4" aria-label="4 bintang">&#9733;</button>
+        <button type="button" class="bm-star" data-n="5" aria-label="5 bintang">&#9733;</button>
+        <span class="bm-lbl" id="bmLabel">Pilih bintang</span>
+      </div>
+
+      <div class="bm-lb">Catatan ulasan <small>(opsional)</small></div>
+      <textarea class="bm-kom" id="bmKomen" maxlength="500" placeholder="Tulis catatan performa perjalanan atau armada..."></textarea>
+      <div class="bm-err" id="bmErr" role="alert"></div>
+
+      <div class="bm-aksi">
+        <button type="button" class="bm-btn" id="bmBatal">Batal</button>
+        <button type="button" class="bm-kirim" id="bmKirim"><i class="far fa-paper-plane"></i> Kirim Penilaian</button>
+      </div>
+    </div>
+  </div>
+</div>

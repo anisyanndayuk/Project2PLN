@@ -1,0 +1,125 @@
+<!-- ============================================================
+     DriverTugas.html : markup + CSS halaman Tugas Saya
+     Tata letak: kartu fokus (tugas berjalan / berikutnya) + daftar tugas lain dikelompokkan per waktu.
+     Dipasang di DriverApp.html dalam section h-tugas. Logikanya ada di DriverTugasJS.html.
+     CSS memakai awalan tg- agar tidak bentrok dengan fitur lain.
+     ============================================================ -->
+<style>
+#h-tugas{display:grid;gap:20px;align-content:start;grid-template-columns:minmax(0,1fr)}
+#h-tugas .info{margin:0}
+.tg-kepala{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.tg-kepala h2{font-size:22px;letter-spacing:-.01em}
+.tg-kepala p{color:var(--abu);margin-top:2px}
+.tg-segar{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--garis);background:#fff;color:var(--biru);font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;transition:.15s}
+.tg-segar:hover{border-color:var(--biru)}
+.tg-segar.putar svg.i{animation:tg-putar .8s linear infinite}
+@keyframes tg-putar{to{transform:rotate(360deg)}}
+
+/* ---- Kartu fokus ---- */
+.tg-fokus{position:relative;overflow:hidden;display:grid;gap:16px;padding:24px 26px;border-radius:20px;box-shadow:0 4px 18px rgba(15,27,45,.06);grid-template-columns:minmax(0,1fr)}
+.tg-fokus::before{content:"";position:absolute;left:0;top:0;right:0;height:5px;background:linear-gradient(90deg,var(--kuning),#FFD000)}
+.tg-fokus.berjalan::before{background:linear-gradient(90deg,#22C55E,#16A34A)}
+.tg-fokus-atas{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tg-tag{background:var(--kuning);font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px}
+.tg-fokus.berjalan .tg-tag{background:#DCFCE7;color:#14532D}
+.tg-kode{color:var(--abu);font-weight:700}
+.tg-fokus h3{font-size:24px;line-height:1.25;letter-spacing:-.01em}
+.tg-waktu{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:600}
+.tg-waktu span{display:inline-flex;gap:7px;align-items:center;background:var(--panel);color:var(--navy);border-radius:99px;padding:6px 13px}
+.tg-jalan{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px}
+.tg-jalan>div{background:linear-gradient(135deg,#DCFCE7,#F0FDF4);border:1px solid #BBF7D0;border-radius:14px;padding:12px 16px;min-width:0}
+.tg-jalan small{display:block;color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.tg-jalan b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:#14532D;white-space:nowrap;margin-top:2px}
+.tg-jalan>div:first-child b{font-size:28px;letter-spacing:.02em}
+.tg-jalan em{display:block;font-style:normal;font-size:12px;color:#166534;opacity:.85;margin-top:2px}
+.tg-jalan em.lewat{color:#B45309;opacity:1;font-weight:700}
+@media (max-width:700px){.tg-jalan{grid-template-columns:1fr 1fr}.tg-jalan>div:first-child{grid-column:1/-1}}
+.tg-info-f{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tg-info-f>div{background:#F8FAFC;border:1px solid var(--garis);border-radius:14px;padding:12px 15px;min-width:0}
+.tg-info-f small{display:block;color:var(--abu);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+.tg-info-f a{color:var(--biru);font-weight:700;text-decoration:none;display:inline-flex;gap:5px;align-items:center;margin-top:3px}
+.tg-info-f .lebar{grid-column:1/-1}
+.tg-mobil{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tg-aksi{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.tg-aksi .btn{padding:14px 22px;border-radius:12px}
+.tg-aksi .btn.utama{flex:1;min-width:200px;box-shadow:0 6px 16px rgba(255,214,0,.35);transition:transform .15s,box-shadow .15s}
+.tg-aksi .btn.utama:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 20px rgba(255,214,0,.45)}
+@media (max-width:560px){.tg-aksi .btn{flex:1 1 100%;justify-content:center;min-width:0}}
+.tg-cat{width:100%;font-size:12px;color:var(--abu);margin-top:-4px}
+
+/* ---- Kelompok & kartu tugas ---- */
+.tg-daftar{display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+.tg-grup{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+.tg-grup-judul{display:flex;gap:10px;align-items:center;font-weight:800;font-size:14px;color:#334155}
+.tg-grup-judul::after{content:"";flex:1;height:1px;background:var(--garis)}
+.tg-grup-judul .jml{background:var(--panel);color:var(--biru);border-radius:99px;padding:2px 10px;font-size:11px;line-height:1.4}
+.tg-grup.terlewat .tg-grup-judul{color:#B91C1C}
+.tg-grup.terlewat .tg-grup-judul .jml{background:#FEE2E2;color:#B91C1C}
+.tg-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;text-align:left;width:100%;background:#fff;border:1px solid var(--garis);border-radius:16px;padding:14px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(15,27,45,.04);transition:transform .18s,box-shadow .18s,border-color .18s;animation:tg-masuk .3s ease-out both}
+.tg-item:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,27,45,.09);border-color:#93C5FD}
+@keyframes tg-masuk{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tg-dt{width:62px;border-radius:13px;background:var(--panel);color:var(--navy);display:grid;justify-items:center;align-content:center;padding:8px 0;text-align:center}
+.tg-grup.hari .tg-dt{background:var(--kuning);color:var(--teks)}
+.tg-grup.terlewat .tg-dt{background:#FEE2E2;color:#991B1B}
+.tg-dt b{font-size:22px;line-height:1}
+.tg-dt span{font-size:10px;font-weight:800;text-transform:uppercase;margin-top:2px}
+.tg-dt small{font-size:10px;font-weight:700;margin-top:2px;opacity:.8}
+.tg-isi{min-width:0;display:grid;gap:4px}
+.tg-judul{font-size:16px;font-weight:800;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg-ket{color:var(--abu);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg-chip{display:flex;gap:8px;flex-wrap:wrap;margin-top:3px}
+.tg-chip>span{display:inline-flex;gap:6px;align-items:center;background:#F1F5F9;color:#334155;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600}
+.tg-chip svg.i{width:13px;height:13px}
+.tg-chip .plat{border-radius:99px}
+.tg-kanan{display:flex;gap:10px;align-items:center;color:var(--abu)}
+.tg-kanan svg.i{width:18px;height:18px}
+.pill.lewat{background:#FEE2E2;color:#B91C1C}
+.tg-lagi{width:100%}
+
+.tg-kosong{background:#fff;border:1px dashed #CBD5E1;border-radius:18px;padding:44px 16px;text-align:center;color:var(--abu)}
+.tg-kosong svg.i{width:38px;height:38px;stroke-width:1.5;display:block;margin:0 auto 8px}
+.tg-kosong b{display:block;color:var(--teks);font-size:16px;margin-bottom:2px}
+#h-tugas.memuat .tg-fokus,#h-tugas.memuat .tg-daftar{opacity:.5;pointer-events:none}
+
+@media (max-width:760px){
+  .tg-fokus{padding:20px 18px}.tg-fokus h3{font-size:20px}
+  .tg-info-f{grid-template-columns:1fr}
+  .tg-item{grid-template-columns:auto minmax(0,1fr);gap:12px}
+  .tg-kanan{display:none}
+  .tg-judul,.tg-ket{white-space:normal}
+}
+@media (prefers-reduced-motion:reduce){.tg-item{animation:none}.tg-segar.putar svg.i{animation:none}}
+
+/* ---- Desain baru: banner halaman (gaya sama dengan Profil) ---- */
+.tg-kepala{position:relative;overflow:hidden;display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap;color:#fff;border-radius:22px;padding:26px 30px;margin-bottom:20px;background:linear-gradient(120deg,var(--navy) 0%,#0B6A8F 68%,#12839F 100%);box-shadow:0 12px 32px rgba(10,61,92,.22);animation:tg-masuk .4s both}
+.tg-kepala::before{content:"";position:absolute;right:-60px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,230,0,.17);pointer-events:none}
+.tg-kepala::after{content:"";position:absolute;left:42%;bottom:-120px;width:210px;height:210px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.tg-kepala>*{position:relative;z-index:1}
+.tg-kepala>div:first-child{display:flex;gap:16px;align-items:center;min-width:0}
+.tg-kepala .bn-ik{flex:none;width:54px;height:54px;border-radius:16px;background:var(--kuning);color:var(--navy);display:grid;place-items:center;box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+.tg-kepala .bn-ik svg.i{width:26px;height:26px}
+.tg-kepala h2{color:#fff;font-size:26px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.tg-kepala p{color:rgba(255,255,255,.85);margin-top:4px}
+.tg-segar{background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.38)!important;color:#fff!important;backdrop-filter:blur(6px);transition:.15s}
+.tg-segar:hover{background:rgba(255,255,255,.26)!important}
+@keyframes tg-masuk{from{opacity:0;transform:translateY(10px)}}
+@media (max-width:560px){.tg-kepala{padding:22px 20px}.tg-kepala h2{font-size:22px}.tg-kepala .bn-ik{width:46px;height:46px}}
+@media (prefers-reduced-motion:reduce){.tg-kepala{animation:none}}
+.tg-fokus,#tg-fokus .tg-kartu{animation:tg-masuk .45s both}
+</style>
+
+<div class="tg-kepala">
+  <div>
+    <span class="bn-ik"><svg class="i"><use href="#list"/></svg></span>
+    <div><h2>Tugas Saya</h2>
+    <p id="tg-sub">Penugasan dari admin yang belum selesai.</p>
+    </div>
+  </div>
+  <button type="button" class="tg-segar" id="tg-segarkan"><svg class="i"><use href="#history"/></svg>Segarkan</button>
+</div>
+
+<!-- Pemberitahuan: akun belum bisa ditugaskan, SIM hampir habis, atau gagal memuat -->
+<div class="info" id="tg-info" hidden></div>
+
+<section id="tg-fokus" hidden></section>
+<div id="tg-isi" class="tg-daftar"></div>
