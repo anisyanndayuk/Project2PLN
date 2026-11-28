@@ -79,20 +79,36 @@ function bsRender() {
   bsEl('bsHal').innerHTML = h;
 }
 
-function bsMuat() {
+var BS_LOADING_HTML = '';
+
+function bsGagal(pesan, awal) {
+  if (!bsEl('bsBody')) return;
+  if (!awal) { toast(pesan); return; }
+  bsEl('bsIsi').style.display = 'none';
+  var l = bsEl('bsLoading');
+  l.style.display = '';
+  l.innerHTML = '<div class="loading-card"><div class="loading-text"><h3>Gagal memuat</h3>' +
+    '<p style="animation:none;margin-bottom:12px">' + bsEsc(pesan) + '</p></div>' +
+    '<button type="button" class="bs-btn" id="bsUlang">Coba lagi</button></div>';
+  bsEl('bsUlang').addEventListener('click', function () {
+    l.innerHTML = BS_LOADING_HTML;
+    bsMuat(true);
+  });
+}
+
+// awal = true: pemuatan pertama, tampilkan kartu loading sampai data siap
+function bsMuat(awal) {
   google.script.run
     .withSuccessHandler(function (r) {
       if (!bsEl('bsBody')) return;
-      if (!r || r.status !== 'success') {
-        bsEl('bsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#b91c1c;padding:32px">' + bsEsc((r && r.message) || 'Gagal memuat data.') + '</td></tr>';
-        return;
-      }
+      if (!r || r.status !== 'success') { bsGagal((r && r.message) || 'Gagal memuat data.', awal); return; }
       BS.semua = r.booking || [];
+      bsEl('bsLoading').style.display = 'none';
+      bsEl('bsIsi').style.display = '';
       bsRender();
     })
     .withFailureHandler(function () {
-      if (!bsEl('bsBody')) return;
-      bsEl('bsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#b91c1c;padding:32px">Koneksi terputus. Muat ulang halaman.</td></tr>';
+      bsGagal('Koneksi terputus. Periksa jaringan lalu coba lagi.', awal);
     })
     .getBerandaPemohon(SID);
 }
@@ -218,6 +234,7 @@ function initBookingSaya() {
   document.body.appendChild(modal);
 
   BS = { semua: [], filter: 'Semua', cari: '', hal: 1, per: 6, aktif: null };
+  BS_LOADING_HTML = bsEl('bsLoading').innerHTML;
 
   bsEl('bsBaru').addEventListener('click', function () { loadView('PemohonBuatBooking'); });
 
@@ -247,6 +264,6 @@ function initBookingSaya() {
     if (e.key === 'Escape' && bsEl('bsModal') && bsEl('bsModal').classList.contains('on')) bsTutup();
   });
 
-  bsMuat();
+  bsMuat(true);
 }
 </script>

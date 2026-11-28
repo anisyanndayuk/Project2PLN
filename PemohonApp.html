@@ -251,6 +251,8 @@
 
     function loadView(namaHalaman) {
       var area = document.getElementById('main-content');
+      // buang sisa pop up halaman sebelumnya yang tertinggal di body
+      document.querySelectorAll('body > .rr-overlay, body > .bs-overlay').forEach(function (m) { m.remove(); });
 
       // ganti tulisan ?page=... di address bar tanpa reload
       try {
@@ -281,6 +283,7 @@
           if (namaHalaman === 'PemohonBeranda' && typeof initBerandaPemohon === 'function') initBerandaPemohon();
           if (namaHalaman === 'PemohonBuatBooking' && typeof initBuatBooking === 'function') initBuatBooking();
           if (namaHalaman === 'PemohonBookingSaya' && typeof initBookingSaya === 'function') initBookingSaya();
+          if (namaHalaman === 'PemohonRiwayat' && typeof initRiwayatRating === 'function') initRiwayatRating();
         })
         .withFailureHandler(function () {
           area.innerHTML = '<div class="err">Gagal memuat halaman. Periksa koneksi lalu muat ulang.</div>';
@@ -446,6 +449,7 @@
   <?!= include('PemohonBerandaJS'); ?>
   <?!= include('PemohonBuatBookingJS'); ?>
   <?!= include('PemohonBookingSayaJS'); ?>
+  <?!= include('PemohonRiwayatJS'); ?>
 
   <script>loadView('PemohonBeranda');</script>
 </body>

@@ -1,0 +1,355 @@
+<script>
+var RR = { semua: [], status: 'Semua', bulan: '', cari: '', hal: 1, per: 6, draft: {}, kirim: false };
+var RR_ESC_BOUND = false;
+var RR_TAB = ['Semua', 'Selesai', 'Ditolak', 'Dibatalkan'];
+var RR_BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+var RR_BLN_PENUH = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+var RR_LABEL = ['', 'Sangat kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat baik'];
+
+function rrEl(id) { return document.getElementById(id); }
+function rrEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function rrTgl(t) {
+  if (!t) return '-';
+  var p = t.split('-');
+  return Number(p[2]) + ' ' + RR_BLN[Number(p[1]) - 1] + ' ' + p[0];
+}
+function rrTglJam(s) {
+  if (!s) return '';
+  var a = s.split(' ');
+  return rrTgl(a[0]) + (a[1] ? ', ' + a[1] + ' WIB' : '');
+}
+function rrBulanLabel(ym) {
+  var p = ym.split('-');
+  return RR_BLN_PENUH[Number(p[1]) - 1] + ' ' + p[0];
+}
+function rrAngka(n) { return Number(n).toLocaleString('id-ID'); }
+function rrBadge(st) { return '<span class="rr-st rr-st-' + st.toLowerCase() + '">' + rrEsc(st) + '</span>'; }
+
+// ---------- Bintang ----------
+function rrBintangStatis(n) {
+  var h = '<span class="rr-bt" aria-label="Rating ' + n + ' dari 5">';
+  for (var i = 1; i <= 5; i++) h += '<span' + (i <= n ? ' class="on"' : '') + '>&#9733;</span>';
+  return h + '</span>';
+}
+function rrWidget(id, n) {
+  var h = '<div class="rr-stars" data-id="' + rrEsc(id) + '">';
+  for (var i = 1; i <= 5; i++) {
+    h += '<button type="button" class="rr-star' + (i <= n ? ' on' : '') + '" data-n="' + i + '" aria-label="' + i + ' bintang">&#9733;</button>';
+  }
+  return h + '<span class="rr-lbl">' + (n ? n + '/5 - ' + RR_LABEL[n] : 'Pilih bintang') + '</span></div>';
+}
+function rrSetBintang(box, n) {
+  box.querySelectorAll('.rr-star').forEach(function (s) {
+    s.classList.toggle('on', Number(s.getAttribute('data-n')) <= n);
+  });
+  box.querySelector('.rr-lbl').textContent = n ? n + '/5 - ' + RR_LABEL[n] : 'Pilih bintang';
+}
+
+function rrMobilHtml(b) {
+  return b.mobil ? rrEsc(b.mobil.nama) + '<span class="rr-plat">' + rrEsc(b.mobil.plat) + '</span>' : '<span class="rr-kosong">-</span>';
+}
+function rrDriverTeks(b) { return b.driver ? rrEsc(b.driver.nama) : '-'; }
+
+// Form rating (dipakai di kartu dan modal)
+function rrFormHtml(b) {
+  var dr = RR.draft[b.id] || { n: 0, k: '' };
+  return '<div class="rr-lb">Rating pengemudi &amp; armada</div>' + rrWidget(b.id, dr.n) +
+    '<div class="rr-lb">Catatan ulasan <small>(opsional)</small></div>' +
+    '<textarea class="rr-kom" data-id="' + rrEsc(b.id) + '" maxlength="500" placeholder="Tulis catatan performa perjalanan atau armada...">' + rrEsc(dr.k) + '</textarea>' +
+    '<div class="rr-err" role="alert"></div>';
+}
+
+// ---------- Perlu dinilai (belum dinilai) / semua sudah dinilai ----------
+function rrKartu(b) {
+  // Klik bintang langsung membuka popup (bintang terpilih + kolom komentar)
+  return '<article class="rr-kartu">' +
+    '<div class="rr-k-top"><b>' + rrTgl(b.tanggal) + '</b><span class="rr-jam">' + rrEsc(b.jamBerangkat) + ' - ' + rrEsc(b.jamTiba) + ' WIB</span></div>' +
+    '<h4>' + rrEsc(b.tujuan) + '</h4><div class="rr-k-sub">' + rrEsc(b.keperluan) + '</div>' +
+    '<div class="rr-armada"><div>' + rrMobilHtml(b) + '</div><div style="text-align:right">' + rrDriverTeks(b) + '<small>Driver</small></div></div>' +
+    '<div class="rr-lb">Rating pengemudi &amp; armada</div>' + rrWidget(b.id, 0) +
+    '<div class="rr-k-sub" style="margin:8px 0 0">Klik bintang untuk memberi penilaian</div>' +
+    '</article>';
+}
+
+function rrRenderPerlu() {
+  var box = rrEl('rrPerlu');
+  if (!box) return;
+  var perlu = RR.semua.filter(function (b) { return b.status === 'Selesai' && !b.rating; });
+  var badge = rrEl('rrBadge');
+  badge.textContent = perlu.length ? perlu.length + ' Tertunda' : '0 Tertunda';
+  badge.classList.toggle('tunda', perlu.length > 0);
+  if (typeof setBadgeDinilai === 'function') setBadgeDinilai(perlu.length);
+
+  if (!perlu.length) {
+    var adaSelesai = RR.semua.some(function (b) { return b.status === 'Selesai'; });
+    box.innerHTML =
+      '<div class="rr-kosongbox"><div class="rr-kb-kiri"><div class="rr-kb-ico"><i class="fas fa-circle-check"></i></div><div>' +
+      '<b>' + (adaSelesai ? 'Semua perjalanan dinas telah dinilai' : 'Belum ada perjalanan yang perlu dinilai') + '</b>' +
+      '<span class="t">' + (adaSelesai ? 'Terima kasih sudah memberikan ulasan. Penilaianmu membantu menjaga standar armada dan pengemudi UP3 Malang.' : 'Perjalanan yang sudah selesai akan muncul di sini untuk dinilai.') + '</span>' +
+      '</div></div><span class="rr-kb-chip">Tidak ada antrean evaluasi</span></div>';
+    return;
+  }
+  box.innerHTML = '<div class="rr-grid">' + perlu.map(rrKartu).join('') + '</div>';
+}
+
+// ---------- Riwayat ----------
+function rrRender() {
+  var selesai = RR.semua.filter(function (b) { return b.status === 'Selesai'; });
+  var dinilai = selesai.filter(function (b) { return b.rating; }).length;
+  rrEl('rrTingkat').innerHTML = '<i class="fas fa-circle-check"></i><span>' +
+    (selesai.length ? 'Tingkat penilaian Anda: ' + Math.round(dinilai / selesai.length * 100) + '%' : 'Belum ada perjalanan selesai') + '</span>';
+
+  rrRenderPerlu();
+
+  var set = {};
+  RR.semua.forEach(function (b) { if (b.tanggal) set[b.tanggal.slice(0, 7)] = 1; });
+  if (RR.bulan && !set[RR.bulan]) RR.bulan = '';
+  rrEl('rrBulan').innerHTML = '<option value="">Semua bulan</option>' +
+    Object.keys(set).sort().reverse().map(function (ym) { return '<option value="' + ym + '">' + rrBulanLabel(ym) + '</option>'; }).join('');
+  rrEl('rrBulan').value = RR.bulan;
+
+  rrRenderTabel();
+}
+
+function rrRenderTabel() {
+  var cari = RR.cari.toLowerCase();
+
+  var hitung = {};
+  RR.semua.forEach(function (b) { hitung[b.status] = (hitung[b.status] || 0) + 1; });
+  rrEl('rrTab').innerHTML = RR_TAB.map(function (t) {
+    var n = t === 'Semua' ? RR.semua.length : (hitung[t] || 0);
+    return '<button type="button" class="rr-chip' + (RR.status === t ? ' on' : '') + '" data-tab="' + t + '">' + t + '<b>' + n + '</b></button>';
+  }).join('');
+
+  var daftar = RR.semua.filter(function (b) {
+    if (RR.status !== 'Semua' && b.status !== RR.status) return false;
+    if (RR.bulan && b.tanggal.slice(0, 7) !== RR.bulan) return false;
+    if (cari) {
+      var gabung = [b.tujuan, b.keperluan, b.mobil ? b.mobil.nama + ' ' + b.mobil.plat : '', b.driver ? b.driver.nama : ''].join(' ').toLowerCase();
+      if (gabung.indexOf(cari) === -1) return false;
+    }
+    return true;
+  });
+
+  var totalJarak = 0;
+  daftar.forEach(function (b) { if (b.status === 'Selesai') totalJarak += b.jarak || 0; });
+  rrEl('rrJarak').textContent = rrAngka(totalJarak) + ' KM';
+
+  var totalHal = Math.max(1, Math.ceil(daftar.length / RR.per));
+  if (RR.hal > totalHal) RR.hal = totalHal;
+  var mulai = (RR.hal - 1) * RR.per;
+  var tampil = daftar.slice(mulai, mulai + RR.per);
+
+  rrEl('rrBody').innerHTML = tampil.length ? tampil.map(function (b) {
+    var selesai = b.status === 'Selesai';
+    var rating;
+    if (!selesai) rating = '<span class="rr-kosong">-</span>';
+    else if (b.rating) rating = '<button type="button" class="rr-lihatrt" data-id="' + rrEsc(b.id) + '" title="Lihat penilaian">' + rrBintangStatis(b.rating.nilai) + '<span>' + b.rating.nilai + '</span></button>';
+    else rating = '<button type="button" class="rr-beri" data-id="' + rrEsc(b.id) + '"><i class="fas fa-star"></i> Beri Nilai</button>';
+    return '<tr>' +
+      '<td><b>' + rrTgl(b.tanggal) + '</b><div class="rr-kecil">' + rrEsc(b.jamBerangkat) + ' - ' + rrEsc(b.jamTiba) + ' WIB</div></td>' +
+      '<td><b>' + rrEsc(b.tujuan) + '</b><div class="rr-kecil">' + rrEsc(b.keperluan) + '</div></td>' +
+      '<td>' + rrMobilHtml(b) + '</td>' +
+      '<td>' + rrDriverTeks(b) + '</td>' +
+      '<td>' + (selesai && b.jarak ? rrAngka(b.jarak) + ' KM' : '-') + '</td>' +
+      '<td>' + (selesai && b.durasi ? b.durasi + ' mnt' : '-') + '</td>' +
+      '<td>' + rrBadge(b.status) + '</td>' +
+      '<td>' + rating + '</td></tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:32px">Belum ada riwayat perjalanan.</td></tr>';
+
+  var awal = daftar.length ? mulai + 1 : 0;
+  rrEl('rrInfo').textContent = 'Menampilkan ' + awal + '-' + (mulai + tampil.length) + ' dari ' + daftar.length + ' riwayat';
+
+  var h = '<button type="button" data-hal="' + (RR.hal - 1) + '"' + (RR.hal === 1 ? ' disabled' : '') + '>Sebelumnya</button>';
+  for (var i = 1; i <= totalHal; i++) {
+    h += '<button type="button" data-hal="' + i + '"' + (i === RR.hal ? ' class="on"' : '') + '>' + i + '</button>';
+  }
+  h += '<button type="button" data-hal="' + (RR.hal + 1) + '"' + (RR.hal === totalHal ? ' disabled' : '') + '>Berikutnya</button>';
+  rrEl('rrHal').innerHTML = h;
+}
+
+var RR_LOADING_HTML = '';
+
+function rrGagal(pesan, awal) {
+  if (!rrEl('rrBody')) return;
+  if (!awal) { toast(pesan); return; }
+  rrEl('rrIsi').style.display = 'none';
+  var l = rrEl('rrLoading');
+  l.style.display = '';
+  l.innerHTML = '<div class="loading-card"><div class="loading-text"><h3>Gagal memuat</h3>' +
+    '<p style="animation:none;margin-bottom:12px">' + rrEsc(pesan) + '</p></div>' +
+    '<button type="button" class="rr-btn" id="rrUlang">Coba lagi</button></div>';
+  rrEl('rrUlang').addEventListener('click', function () {
+    l.innerHTML = RR_LOADING_HTML;
+    rrMuat(true);
+  });
+}
+
+// awal = true: pemuatan pertama, tampilkan kartu loading sampai data siap
+function rrMuat(awal) {
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (!rrEl('rrBody')) return;
+      if (!r || r.status !== 'success') { rrGagal((r && r.message) || 'Gagal memuat data.', awal); return; }
+      RR.semua = r.booking || [];
+      rrEl('rrLoading').style.display = 'none';
+      rrEl('rrIsi').style.display = '';
+      rrRender();
+    })
+    .withFailureHandler(function () {
+      rrGagal('Koneksi terputus. Periksa jaringan lalu coba lagi.', awal);
+    })
+    .getRiwayatPemohon(SID);
+}
+
+// ---------- Modal (di tengah layar) ----------
+function rrBukaModal(id) {
+  var b = RR.semua.filter(function (x) { return x.id === id; })[0];
+  if (!b) return;
+
+  rrEl('rrMJudul').textContent = b.rating ? 'Penilaian Perjalanan' : 'Beri Penilaian';
+  rrEl('rrMSub').textContent = rrTgl(b.tanggal) + ' - ' + b.tujuan;
+
+  var h = '<div class="rr-ringkas">' +
+    '<div class="l"><small>Tujuan</small><span>' + rrEsc(b.tujuan) + '</span></div>' +
+    '<div><small>Mobil</small><span>' + rrMobilHtml(b) + '</span></div>' +
+    '<div><small>Driver</small><span>' + rrDriverTeks(b) + '</span></div>' +
+    '</div>';
+
+  if (b.rating) {
+    h += '<div class="rr-lb">Rating pengemudi &amp; armada</div>' +
+      '<div>' + rrBintangStatis(b.rating.nilai) + ' <b style="margin-left:6px">' + b.rating.nilai + '/5 - ' + RR_LABEL[b.rating.nilai] + '</b></div>' +
+      '<div class="rr-lb">Catatan ulasan</div>' +
+      (b.rating.komentar ? '<div class="rr-ulasan">' + rrEsc(b.rating.komentar) + '</div>' : '<div class="rr-kosong">Tidak ada catatan.</div>') +
+      (b.rating.tanggal ? '<div class="rr-tglnilai">Dinilai pada ' + rrEsc(rrTglJam(b.rating.tanggal)) + '</div>' : '') +
+      '<div class="rr-aksi" style="margin-top:16px"><button type="button" class="rr-btn rr-tutup">Tutup</button></div>';
+  } else {
+    h += '<div class="rr-form">' + rrFormHtml(b) +
+      '<div class="rr-aksi"><button type="button" class="rr-btn rr-tutup">Batal</button>' +
+      '<button type="button" class="rr-kirim" data-id="' + rrEsc(b.id) + '"><i class="far fa-paper-plane"></i> Kirim Penilaian</button></div></div>';
+  }
+  rrEl('rrMBody').innerHTML = h;
+  rrEl('rrMBody').scrollTop = 0;
+  rrEl('rrModal').classList.add('on');
+  var ta = rrEl('rrMBody').querySelector('.rr-kom');
+  if (ta) ta.focus();
+}
+
+function rrTutupModal() {
+  var m = rrEl('rrModal');
+  if (m) m.classList.remove('on');
+  rrRenderPerlu();   // samakan kartu dengan isian terakhir
+}
+
+// ---------- Kirim ----------
+function rrKirim(id, btn) {
+  var err = btn.closest('.rr-form').querySelector('.rr-err');
+  var d = RR.draft[id] || { n: 0, k: '' };
+  if (!d.n) { err.textContent = 'Pilih 1 sampai 5 bintang dulu.'; return; }
+  if (RR.kirim) return;
+  RR.kirim = true;
+  var label = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+
+  google.script.run
+    .withSuccessHandler(function (r) {
+      RR.kirim = false;
+      if (r && r.status === 'success') {
+        delete RR.draft[id];
+        toast(r.message);
+        if (rrEl('rrModal')) rrEl('rrModal').classList.remove('on');
+        if (rrEl('rrBody')) rrMuat();
+        return;
+      }
+      if (!rrEl('rrBody')) return;
+      btn.disabled = false; btn.innerHTML = label;
+      err.textContent = (r && r.message) || 'Gagal mengirim penilaian.';
+    })
+    .withFailureHandler(function () {
+      RR.kirim = false;
+      if (!rrEl('rrBody')) return;
+      btn.disabled = false; btn.innerHTML = label;
+      err.textContent = 'Koneksi terputus. Coba lagi.';
+    })
+    .kirimRating(SID, id, d.n, d.k);
+}
+
+function rrKlik(e) {
+  var s = e.target.closest('.rr-star');
+  if (s) {
+    var box = s.closest('.rr-stars');
+    var id = box.getAttribute('data-id');
+    var n = Number(s.getAttribute('data-n'));
+    var d = RR.draft[id] = RR.draft[id] || { n: 0, k: '' };
+    d.n = n;
+    if (box.closest('#rrPerlu')) { rrBukaModal(id); return; }   // dari kartu: buka popup
+    rrSetBintang(box, n);
+    var er = box.closest('.rr-form').querySelector('.rr-err');
+    if (er) er.textContent = '';
+    return;
+  }
+  var k = e.target.closest('.rr-kirim');
+  if (k) rrKirim(k.getAttribute('data-id'), k);
+}
+
+function rrKetik(e) {
+  var t = e.target.closest('.rr-kom');
+  if (!t) return;
+  var id = t.getAttribute('data-id');
+  var d = RR.draft[id] = RR.draft[id] || { n: 0, k: '' };
+  d.k = t.value;
+}
+
+// Dipanggil loadView() setelah HTML Riwayat & Rating masuk
+function initRiwayatRating() {
+  if (!rrEl('rrBody')) return;
+
+  // Pindahkan modal ke <body> supaya di tengah layar; buang sisa dari kunjungan sebelumnya
+  var modal = rrEl('rrModal');
+  document.querySelectorAll('body > .rr-overlay').forEach(function (m) { m.remove(); });
+  document.body.appendChild(modal);
+
+  RR = { semua: [], status: 'Semua', bulan: '', cari: '', hal: 1, per: 6, draft: {}, kirim: false };
+  RR_LOADING_HTML = rrEl('rrLoading').innerHTML;
+
+  rrEl('rrPerlu').addEventListener('click', rrKlik);
+  rrEl('rrPerlu').addEventListener('input', rrKetik);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal || e.target.closest('.rr-tutup')) { rrTutupModal(); return; }
+    rrKlik(e);
+  });
+  modal.addEventListener('input', rrKetik);
+
+  rrEl('rrCari').addEventListener('input', function () { RR.cari = this.value.trim(); RR.hal = 1; rrRenderTabel(); });
+  rrEl('rrBulan').addEventListener('change', function () { RR.bulan = this.value; RR.hal = 1; rrRenderTabel(); });
+  rrEl('rrTab').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-tab]');
+    if (!t) return;
+    RR.status = t.getAttribute('data-tab'); RR.hal = 1; rrRenderTabel();
+  });
+  rrEl('rrHal').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-hal]');
+    if (!t || t.disabled) return;
+    RR.hal = Number(t.getAttribute('data-hal')); rrRenderTabel();
+  });
+  rrEl('rrBody').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-id]');
+    if (t) rrBukaModal(t.getAttribute('data-id'));
+  });
+
+  if (!RR_ESC_BOUND) {
+    RR_ESC_BOUND = true;
+    document.addEventListener('keydown', function (e) {
+      var m = rrEl('rrModal');
+      if (e.key === 'Escape' && m && m.classList.contains('on')) rrTutupModal();
+    });
+  }
+
+  rrMuat(true);
+}
+</script>

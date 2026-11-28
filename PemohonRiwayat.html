@@ -1,0 +1,168 @@
+<style>
+.rr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.rr-top h2{margin:0;font-size:22px;font-weight:800;color:#0f172a}
+.rr-top p{margin:3px 0 0;font-size:13px;color:#64748b}
+.rr-pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #bae0f7;color:#0b5c85;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700}
+.rr-card{background:#fff;border:1px solid #e6eaf0;border-radius:16px;padding:22px 24px;margin-bottom:18px}
+.rr-sec{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.rr-sec h3{margin:0;font-size:17px;color:#0f172a;display:flex;align-items:center;gap:10px}
+.rr-sec p{margin:3px 0 0;font-size:13px;color:#64748b}
+.rr-badge{display:inline-block;border-radius:999px;padding:3px 12px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534}
+.rr-badge.tunda{background:#fef3c7;color:#92400e}
+.rr-total{font-size:11px;letter-spacing:.05em;font-weight:700;color:#64748b;background:#f1f5f9;border-radius:8px;padding:6px 12px}
+.rr-total b{color:#0b5c85;margin-left:4px}
+
+/* Belum dinilai: kartu */
+.rr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.rr-kartu{border:1px solid #e6eaf0;border-radius:14px;padding:18px 20px;background:#fff}
+.rr-k-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:#64748b;margin-bottom:10px}
+.rr-jam{background:#e0f2fe;color:#0369a1;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700}
+.rr-kartu h4{margin:0;font-size:15px;color:#0f172a}
+.rr-k-sub{font-size:12.5px;color:#64748b;margin:2px 0 12px}
+.rr-armada{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:#f8fafc;border-radius:10px;padding:10px 14px;font-size:13px;color:#334155;margin-bottom:14px}
+.rr-armada small{display:block;color:#94a3b8;font-size:11px}
+.rr-plat{display:inline-block;margin-left:6px;background:#1e293b;color:#fff;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700}
+.rr-lb{font-size:12px;font-weight:700;color:#334155;margin:12px 0 6px}
+.rr-lb small{font-weight:500;color:#94a3b8}
+.rr-stars{display:flex;align-items:center;gap:2px}
+.rr-star{border:0;background:none;padding:0 1px;font-size:28px;line-height:1;color:#d1d5db;cursor:pointer;transition:transform .1s}
+.rr-star:hover{transform:scale(1.15)}
+.rr-star.on{color:#f59e0b}
+.rr-lbl{margin-left:10px;font-size:12px;font-weight:600;color:#64748b}
+.rr-bt{color:#d1d5db;letter-spacing:1px;font-size:15px;white-space:nowrap}
+.rr-bt .on{color:#f59e0b}
+.rr-kom{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;resize:vertical;min-height:84px;background:#f8fafc}
+.rr-kom:focus{outline:0;border-color:#1d6fa5;background:#fff}
+.rr-err{min-height:16px;margin-top:6px;font-size:12px;color:#dc2626}
+.rr-aksi{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.rr-btn{border:1px solid #dbe2ea;background:#fff;border-radius:10px;padding:10px 16px;font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer}
+.rr-kirim{display:inline-flex;align-items:center;gap:8px;border:0;background:#f9e326;color:#1e293b;border-radius:10px;padding:10px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.rr-kirim:hover:not(:disabled){background:#e9d519}
+.rr-kirim:disabled{opacity:.6;cursor:default}
+
+/* Sudah dinilai semua: kondisi kosong */
+.rr-kosongbox{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(90deg,#fffbe0,#fff);border:1px solid #f3e9a0;border-radius:14px;padding:20px 24px}
+.rr-kb-kiri{display:flex;align-items:center;gap:16px}
+.rr-kb-ico{width:52px;height:52px;border-radius:14px;background:#fff;border:1px solid #e6eaf0;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.rr-kosongbox b{display:block;font-size:15px;color:#0f172a;margin-bottom:3px}
+.rr-kosongbox span.t{font-size:13px;color:#64748b;line-height:1.5}
+.rr-kb-chip{background:#fff;border:1px solid #e6eaf0;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:#334155}
+.rr-kb-chip:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#0b5c85;margin-right:8px}
+
+/* Riwayat */
+.rr-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rr-cari{flex:1 1 260px;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;padding:11px 14px;font:inherit;font-size:14px;background:#f8fafc}
+.rr-bulan{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;background:#fff;color:#334155}
+.rr-tab{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.rr-chip{border:0;background:#f1f5f9;color:#475569;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.rr-chip b{margin-left:6px;background:#e2e8f0;border-radius:999px;padding:1px 8px;font-size:11px}
+.rr-chip.on{background:#f9e326;color:#1e293b}
+.rr-wrap{overflow-x:auto}
+.rr-tabel{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+.rr-tabel th{text-align:left;font-size:11px;letter-spacing:.04em;color:#64748b;padding:10px 12px;background:#f8fafc;text-transform:uppercase}
+.rr-tabel td{padding:12px;border-bottom:1px solid #eef2f6;vertical-align:top;color:#334155}
+.rr-kecil{color:#94a3b8;font-size:12px;margin-top:2px}
+.rr-kosong{color:#94a3b8;font-style:italic}
+.rr-st{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.rr-st-selesai{background:#dcfce7;color:#166534}
+.rr-st-ditolak{background:#fee2e2;color:#b91c1c}
+.rr-st-dibatalkan{background:#f1f5f9;color:#475569}
+.rr-beri{display:inline-flex;align-items:center;gap:6px;border:0;background:#f9e326;color:#1e293b;border-radius:8px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.rr-beri:hover{background:#e9d519}
+.rr-lihatrt{display:inline-flex;align-items:center;gap:8px;border:0;background:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:#334155;cursor:pointer}
+.rr-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#64748b}
+.rr-hal{display:flex;gap:6px}
+.rr-hal button{border:1px solid #e2e8f0;background:#fff;border-radius:8px;min-width:34px;height:34px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer}
+.rr-hal button.on{background:#f9e326;border-color:#f9e326;font-weight:700}
+.rr-hal button:disabled{opacity:.4;cursor:default}
+
+/* Modal di tengah layar */
+.rr-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.5);backdrop-filter:blur(2px)}
+.rr-overlay.on{display:flex}
+.rr-modal{width:min(520px,100%);max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.3);animation:rrMuncul .2s ease}
+@keyframes rrMuncul{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.rr-m-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 24px 14px;border-bottom:1px solid #eef2f6}
+.rr-m-judul{font-size:18px;font-weight:700;color:#0b5c85}
+.rr-m-sub{margin-top:4px;font-size:13px;color:#64748b}
+.rr-x{border:0;background:none;font-size:26px;line-height:1;color:#64748b;cursor:pointer}
+.rr-m-body{padding:18px 24px 22px;overflow-y:auto}
+.rr-ringkas{background:#f8fafc;border-radius:12px;padding:12px 16px;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:6px}
+.rr-ringkas .l{grid-column:1/-1}
+.rr-ringkas small{display:block;color:#64748b;font-size:11px;margin-bottom:2px}
+.rr-ringkas span{color:#0f172a;font-weight:600}
+.rr-ringkas span.rr-plat{color:#fff;font-size:11px;font-weight:700;margin-left:6px;vertical-align:1px}
+.rr-ulasan{background:#f8fafc;border-radius:10px;padding:12px 14px;font-size:13px;color:#334155;line-height:1.5;white-space:pre-wrap}
+.rr-tglnilai{margin-top:8px;font-size:12px;color:#94a3b8}
+
+@media(max-width:900px){.rr-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.rr-ringkas{grid-template-columns:1fr}}
+</style>
+
+<div id="rrLoading" class="app-loading-container">
+  <div class="loading-card">
+    <div class="brand-spinner"><div class="spinner-ring"></div></div>
+    <div class="loading-text">
+      <h3>Memuat Riwayat...</h3>
+      <p>Mohon tunggu sebentar</p>
+    </div>
+  </div>
+</div>
+
+<div id="rrIsi" style="display:none">
+<div class="rr-top">
+  <div>
+    <h2>Riwayat &amp; Rating</h2>
+    <p>Nilai perjalanan yang sudah selesai dan lihat arsip pengajuanmu</p>
+  </div>
+  <div class="rr-pill" id="rrTingkat"><i class="fas fa-circle-check"></i><span>Memuat...</span></div>
+</div>
+
+<section class="rr-card">
+  <div class="rr-sec">
+    <h3>Perlu Dinilai <span class="rr-badge" id="rrBadge">...</span></h3>
+    <p>Ulasanmu membantu menjaga kualitas pengemudi dan armada</p>
+  </div>
+  <div id="rrPerlu"><div class="rr-kosong" style="padding:20px 0">Memuat...</div></div>
+</section>
+
+<section class="rr-card">
+  <div class="rr-sec">
+    <div>
+      <h3>Riwayat Perjalanan</h3>
+      <p>Daftar arsip pengajuan yang sudah selesai, ditolak, atau dibatalkan</p>
+    </div>
+    <span class="rr-total">TOTAL JARAK: <b id="rrJarak">0 KM</b></span>
+  </div>
+  <div class="rr-bar">
+    <input type="text" class="rr-cari" id="rrCari" placeholder="Cari tujuan, keperluan, armada, driver...">
+    <select class="rr-bulan" id="rrBulan"><option value="">Semua bulan</option></select>
+  </div>
+  <div class="rr-tab" id="rrTab"></div>
+  <div class="rr-wrap">
+    <table class="rr-tabel">
+      <thead>
+        <tr><th>Tanggal</th><th>Tujuan &amp; Keperluan</th><th>Mobil</th><th>Driver</th><th>Jarak</th><th>Durasi</th><th>Status</th><th>Rating</th></tr>
+      </thead>
+      <tbody id="rrBody"><tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:32px">Memuat...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="rr-foot">
+    <span id="rrInfo"></span>
+    <div class="rr-hal" id="rrHal"></div>
+  </div>
+</section>
+
+</div>
+
+<div class="rr-overlay" id="rrModal">
+  <div class="rr-modal" role="dialog" aria-modal="true">
+    <div class="rr-m-head">
+      <div>
+        <div class="rr-m-judul" id="rrMJudul"></div>
+        <div class="rr-m-sub" id="rrMSub"></div>
+      </div>
+      <button type="button" class="rr-x rr-tutup" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="rr-m-body" id="rrMBody"></div>
+  </div>
+</div>

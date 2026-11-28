@@ -10,6 +10,7 @@ const KOLOM_MOBIL = ['ID_MOBIL', 'PLAT', 'JENIS', 'KAPASITAS', 'ASAL', 'ID_DRIVE
 const KOLOM_DRIVER = ['ID_DRIVER', 'ID_PENGGUNA', 'STATUS_DRIVER', 'JENIS_SIM', 'MASA_BERLAKU_SIM', 'PENGALAMAN_TAHUN',
   'RUTE_DIKUASAI', 'SERTIFIKASI', 'AKTIF'];
 const KOLOM_RATING = ['ID_RATING', 'ID_BOOKING', 'ID_DRIVER', 'ID_PEMOHON', 'TANGGAL', 'NILAI', 'KOMENTAR'];
+const KOLOM_PERJALANAN = ['ID_PERJALANAN', 'ID_BOOKING', 'JARAK_KM', 'DURASI_MENIT'];
 const TZ = 'Asia/Jakarta';
 const STATUS_AKTIF = ['Diajukan', 'Disetujui', 'Berjalan'];
 const STATUS_BARU = 'Diajukan';             
@@ -113,7 +114,7 @@ function getBerandaPemohon(sid) {
       b._urut = b.tanggal + ' ' + b.jamBerangkat + ' ' + ('00000' + i).slice(-5);
       milikku.push(b);
     });
-    milikku.sort(function (a, b) { return a._urut < b._urut ? 1 : -1; });
+    milikku.sort(function (a, b) { return a._urut > b._urut ? 1 : -1; });
 
     var hariIni = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
     var terdekat = function (daftar) { return daftar.sort(function (a, b) { return a._urut > b._urut ? 1 : -1; })[0]; };
@@ -300,5 +301,78 @@ function batalkanBooking(sid, idBooking, alasan) {
     return { status: 'error', message: 'Gagal membatalkan: ' + err.message };
   } finally {
     try { lock.releaseLock(); } catch (x) {}
+  }
+}
+
+// Peta mobil & driver (sama seperti di getBerandaPemohon)
+function petaMobilDriver_() {
+  var mb = bukaSheet_('MOBIL', KOLOM_MOBIL);
+  var dr = bukaSheet_('DRIVER', KOLOM_DRIVER);
+  var pg = bukaTabel_();
+  var mobil = {}, pengguna = {}, driver = {};
+  mb.data.forEach(function (r) {
+    mobil[teks_(r[mb.h.ID_MOBIL])] = { nama: teks_(r[mb.h.JENIS]), plat: teks_(r[mb.h.PLAT]), ket: teks_(r[mb.h.KETERANGAN]) };
+  });
+  pg.data.forEach(function (r) {
+    pengguna[teks_(r[pg.h.ID_PENGGUNA])] = { nama: teks_(r[pg.h.NAMA]), noHp: teks_(r[pg.h.NO_HP]), peran: teks_(r[pg.h.PERAN]) };
+  });
+  dr.data.forEach(function (r) {
+    var p = pengguna[teks_(r[dr.h.ID_PENGGUNA])];
+    if (p) driver[teks_(r[dr.h.ID_DRIVER])] = { nama: p.nama, noHp: p.noHp };
+  });
+  Object.keys(pengguna).forEach(function (id) {
+    if (pengguna[id].peran === 'Driver' && !driver[id]) driver[id] = { nama: pengguna[id].nama, noHp: pengguna[id].noHp };
+  });
+  return { mobil: mobil, driver: driver };
+}
+
+// Data halaman Riwayat & Rating: booking Selesai / Ditolak / Dibatalkan milik pemohon + jarak, durasi, rating
+function getRiwayatPemohon(sid) {
+  try {
+    var u = sesiPemohon_(sid);
+    if (!u) return { status: 'error', message: 'Sesi berakhir. Silakan masuk lagi.' };
+    var bk = bukaSheet_('BOOKING', KOLOM_BOOKING);
+    var rt = bukaSheet_('RATING', KOLOM_RATING);
+    var pj = bukaSheet_('PERJALANAN', KOLOM_PERJALANAN);
+    var peta = petaMobilDriver_();
+
+    var rating = {};
+    rt.data.forEach(function (r) {
+      if (teks_(r[rt.h.ID_PEMOHON]) !== u.id) return;
+      rating[teks_(r[rt.h.ID_BOOKING])] = {
+        nilai: Number(r[rt.h.NILAI]) || 0,
+        komentar: teks_(r[rt.h.KOMENTAR]),
+        tanggal: fmtWaktu_(r[rt.h.TANGGAL])
+      };
+    });
+
+    var trip = {};
+    pj.data.forEach(function (r) {
+      trip[teks_(r[pj.h.ID_BOOKING])] = { jarak: Number(r[pj.h.JARAK_KM]) || 0, durasi: Number(r[pj.h.DURASI_MENIT]) || 0 };
+    });
+
+    var arsip = ['Selesai', 'Ditolak', 'Dibatalkan'];
+    var daftar = [];
+    bk.data.forEach(function (r, i) {
+      if (teks_(r[bk.h.ID_PEMOHON]) !== u.id) return;
+      var b = ringkasBooking_(r, bk, peta.mobil, peta.driver);
+      if (arsip.indexOf(b.status) === -1) return;
+      var t = trip[b.id] || {};
+      b.jarak = t.jarak || 0;
+      b.durasi = t.durasi || 0;
+      b.rating = rating[b.id] || null;
+      b._urut = b.tanggal + ' ' + b.jamBerangkat + ' ' + ('00000' + i).slice(-5);
+      daftar.push(b);
+    });
+    // Perjalanan Selesai di atas, lalu Ditolak/Dibatalkan. Di tiap kelompok, tanggal paling awal dulu.
+    daftar.sort(function (a, b) {
+      var ka = a.status === 'Selesai' ? 0 : 1, kb = b.status === 'Selesai' ? 0 : 1;
+      if (ka !== kb) return ka - kb;
+      return a._urut > b._urut ? 1 : -1;
+    });
+
+    return { status: 'success', booking: daftar.slice(0, 500) };
+  } catch (err) {
+    return { status: 'error', message: 'Gagal memuat riwayat: ' + err.message };
   }
 }

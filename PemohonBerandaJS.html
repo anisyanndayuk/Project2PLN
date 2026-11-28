@@ -109,14 +109,14 @@ function bpRenderMendatang() {
   var b = bp.data.mendatang, el = bpEl('bpMendatang');
   var judul = '<div class="hh"><h2>Perjalanan<br>Mendatang</h2>';
   if (!b) { el.innerHTML = judul + '</div><div class="empty">Belum ada perjalanan yang disetujui.</div>'; return; }
-  var m = b.mobil, d = b.driver, hp = d ? String(d.noHp || '').replace(/[^0-9+]/g, '') : '';
+  var m = b.mobil, d = b.driver, hp = d ? String(d.noHp || '').replace(/[^0-9+]/g, '').replace(/^0/, '+62') : '';
   var mobil = (m && (m.nama || m.plat))
     ? '<div class="vrow"><div class="ico"><i class="fas fa-car"></i></div><div class="t">' + bpEsc(m.nama || m.plat) +
       (m.ket ? '<small>' + bpEsc(m.ket) + '</small>' : '') + '</div>' + (m.plat ? '<span class="plat">' + bpEsc(m.plat) + '</span>' : '') + '</div>'
     : '<div class="vrow"><div class="ico"><i class="fas fa-car"></i></div><div class="t"><span class="wait">Mobil belum dialokasikan</span></div></div>';
   var driver = d
     ? '<div class="vrow"><div class="ico y">' + bpEsc(bpInisial(d.nama)) + '</div><div class="t">' + bpEsc(d.nama) + '<small>Driver Operasional</small></div>' +
-      (hp ? '<a class="tel" href="tel:' + hp + '" aria-label="Telepon ' + bpEsc(d.nama) + '"><i class="fas fa-phone"></i></a>' : '') + '</div>'
+      (hp ? '<a class="tel" href="tel:' + hp + '" target="_top" rel="noopener" data-nama="' + bpEsc(d.nama) + '" onclick="return bpTelepon(this)" aria-label="Telepon ' + bpEsc(d.nama) + '"><i class="fas fa-phone"></i></a>' : '') + '</div>'
     : '<div class="vrow"><div class="ico y"><i class="fas fa-user"></i></div><div class="t"><span class="wait">Driver belum ditugaskan</span></div></div>';
   el.innerHTML = judul + '<span class="when">' + bpEsc(bpLabelHari(b.tanggal)) + '</span></div>' +
     '<div class="tbox"><div class="k">Tujuan Penugasan</div><h3>' + bpEsc(b.tujuan) + '</h3>' +
@@ -147,33 +147,161 @@ function bpRenderNilai() {
   }).join('') + '</div>';
 }
 
-function bpGalat(pesan) {
-  ['bpMendatang', 'bpPerluNilai'].forEach(function (id) { bpEl(id).innerHTML = ''; });
-  bpEl('bpPaging').style.display = 'none';
-  bpEl('bpTabel').innerHTML = '<div class="err">' + bpEsc(pesan) + '<br><button type="button" class="btn-o btn-s" onclick="bpMuat()">Coba lagi</button></div>';
+var BP_LOADING_HTML = '';
+
+function bpGagal(pesan, awal) {
+  if (!bpEl('bpTabel')) return;
+  if (!awal) { toast(pesan); return; }
+  bpEl('bpIsi').style.display = 'none';
+  var l = bpEl('bpLoading');
+  l.style.display = '';
+  l.innerHTML = '<div class="loading-card"><div class="loading-text"><h3>Gagal memuat</h3>' +
+    '<p style="animation:none;margin-bottom:12px">' + bpEsc(pesan) + '</p></div>' +
+    '<button type="button" class="btn-o btn-s" id="bpUlang">Coba lagi</button></div>';
+  bpEl('bpUlang').addEventListener('click', function () {
+    l.innerHTML = BP_LOADING_HTML;
+    bpMuat(true);
+  });
 }
 
 // ---------- Ambil data ----------
-function bpMuat() {
+// awal = true: pemuatan pertama, tampilkan kartu loading sampai data siap
+function bpMuat(awal) {
   var tok = ++bp.token;
   google.script.run
     .withSuccessHandler(function (r) {
       if (tok !== bp.token || !bpEl('bpTabel')) return;   // halaman sudah berganti
-      if (!r || r.status !== 'success') { bpGalat((r && r.message) || 'Data belum bisa dimuat.'); return; }
+      if (!r || r.status !== 'success') { bpGagal((r && r.message) || 'Data belum bisa dimuat.', awal); return; }
       bp.data = r;
+      bpEl('bpLoading').style.display = 'none';
+      bpEl('bpIsi').style.display = '';
       bpRenderRingkas(); bpRenderTabel(); bpRenderMendatang(); bpRenderNilai(); bpRenderNotif();
     })
     .withFailureHandler(function () {
       if (tok !== bp.token || !bpEl('bpTabel')) return;
-      bpGalat('Koneksi terputus. Periksa jaringan Anda.');
+      bpGagal('Koneksi terputus. Periksa jaringan Anda.', awal);
     })
     .getBerandaPemohon(SID);
+}
+
+// ---------- Pop up penilaian (sama seperti halaman Riwayat) ----------
+var BP_LABEL = ['', 'Sangat kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat baik'];
+var bpNilai = { id: '', n: 0, kirim: false };
+
+function bpSetBintang(n) {
+  bpNilai.n = n;
+  bpEl('bmStars').querySelectorAll('.bm-star').forEach(function (s) { s.classList.toggle('on', +s.dataset.n <= n); });
+  bpEl('bmLabel').textContent = n ? n + '/5 - ' + BP_LABEL[n] : 'Pilih bintang';
+}
+
+// n = bintang yang diklik di kartu (0 bila klik tombol Kirim Ulasan)
+function bpBukaNilai(id, n) {
+  if (!bpEl('bmModal')) { toast('Pop up penilaian belum terpasang.'); return; }
+  var b = (bp.data.perluDinilai || []).filter(function (x) { return x.id === id; })[0];
+  if (!b) return;
+  bpNilai.id = id;
+  bpEl('bmSub').textContent = bpTgl(b.tanggal) + ' - ' + b.tujuan;
+  bpEl('bmTujuan').textContent = b.tujuan || '-';
+  var m = b.mobil;
+  bpEl('bmMobil').innerHTML = (m && (m.nama || m.plat))
+    ? bpEsc(m.nama || m.plat) + (m.plat ? '<span class="bm-plat">' + bpEsc(m.plat) + '</span>' : '') : '-';
+  bpEl('bmDriver').textContent = (b.driver && b.driver.nama) || '-';
+  bpEl('bmKomen').value = '';
+  bpEl('bmErr').textContent = '';
+  bpSetBintang(n || 0);
+  bpEl('bmModal').classList.add('on');
+  bpEl('bmKomen').focus();
+}
+
+function bpTutupNilai() {
+  if (bpNilai.kirim) return;   // jangan ditutup saat sedang mengirim
+  var m = bpEl('bmModal');
+  if (m) m.classList.remove('on');
+}
+
+function bpKirimNilai() {
+  if (bpNilai.kirim) return;
+  if (!bpNilai.n) { bpEl('bmErr').textContent = 'Pilih 1 sampai 5 bintang dulu.'; return; }
+  var id = bpNilai.id, n = bpNilai.n, komentar = bpEl('bmKomen').value;
+  var btn = bpEl('bmKirim'), label = btn.innerHTML;
+  bpNilai.kirim = true;
+  btn.disabled = true; btn.textContent = 'Mengirim...';
+  bpEl('bmErr').textContent = '';
+
+  // true bila pop up masih ada di layar (halaman belum berganti)
+  function pulih() {
+    bpNilai.kirim = false;
+    var k = bpEl('bmKirim');
+    if (!k) return false;
+    k.disabled = false; k.innerHTML = label;
+    return true;
+  }
+
+  google.script.run
+    .withSuccessHandler(function (r) {
+      var ada = pulih();
+      if (r && r.status === 'success') {
+        if (ada) { bpEl('bmModal').classList.remove('on'); bpMuat(); }   // tutup pop up, segarkan Beranda
+        if (window.Swal) {
+          Swal.fire({ icon: 'success', title: 'Penilaian terkirim', text: 'Terima kasih atas penilaian Anda.',
+                      confirmButtonText: 'Tutup', confirmButtonColor: '#1D6FA5' });
+        } else { toast(r.message); }
+      } else if (ada) {
+        bpEl('bmErr').textContent = (r && r.message) || 'Gagal mengirim penilaian.';
+      }
+    })
+    .withFailureHandler(function () { if (pulih()) bpEl('bmErr').textContent = 'Koneksi terputus. Coba lagi.'; })
+    .kirimRating(SID, id, n, komentar);
+}
+
+// Di HP: buka aplikasi Telepon. Di laptop: salin nomor driver.
+// Pop up nomor driver. HP: ada tombol Telepon + Salin. Laptop: Salin saja.
+function bpTelepon(a) {
+  var no = a.getAttribute('href').replace('tel:', '');
+  var nama = a.getAttribute('data-nama') || 'Driver';
+  var hp = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (!window.Swal) {                       // cadangan bila SweetAlert2 tidak termuat
+    if (hp) return true;                    // HP: lanjutkan link tel:
+    toast('Nomor driver: ' + no);
+    return false;
+  }
+
+  function salin() {
+    var tombol = hp ? Swal.getDenyButton() : Swal.getConfirmButton();
+    try {
+      navigator.clipboard.writeText(no)
+        .then(function () { tombol.textContent = 'Nomor tersalin'; })
+        .catch(function () { tombol.textContent = 'Salin manual: ' + no; });
+    } catch (e) { tombol.textContent = 'Salin manual: ' + no; }
+    return false;                           // pop up tetap terbuka
+  }
+
+  Swal.fire({
+    title: bpEsc(nama),
+    html: '<div style="font-size:24px;font-weight:800;letter-spacing:.5px;color:#0F2C59">' + bpEsc(no) + '</div>' +
+          '<div style="margin-top:4px;font-size:13px;color:#6B7280">Driver Operasional</div>',
+    showCancelButton: true,
+    cancelButtonText: 'Tutup',
+    confirmButtonText: hp ? 'Telepon' : 'Salin Nomor',
+    showDenyButton: hp,
+    denyButtonText: 'Salin Nomor',
+    confirmButtonColor: '#1D6FA5',
+    denyButtonColor: '#6B7280',
+    preConfirm: function () {
+      if (hp) { window.open('tel:' + no, '_top'); return; }   // HP: buka aplikasi Telepon
+      return salin();                                          // laptop: salin nomor
+    },
+    preDeny: salin
+  });
+  return false;
 }
 
 // ---------- Dipanggil loadView() setelah HTML Beranda masuk ----------
 function initBerandaPemohon() {
   bp.tab = 'semua'; bp.hal = 0;
   bpRenderSapa();
+  BP_LOADING_HTML = bpEl('bpLoading').innerHTML;
 
   bpEl('bpTabs').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-tab]');
@@ -185,31 +313,29 @@ function initBerandaPemohon() {
   bpEl('bpPrev').addEventListener('click', function () { bp.hal--; bpRenderTabel(); });
   bpEl('bpNext').addEventListener('click', function () { bp.hal++; bpRenderTabel(); });
 
+    // Klik bintang atau "Kirim Ulasan" di kartu -> buka pop up
   bpEl('bpPerluNilai').addEventListener('click', function (e) {
     var card = e.target.closest('.rc');
     if (!card) return;
-    var pesan = card.querySelector('.rmsg');
     var s = e.target.closest('.stars button');
-    if (s) {
-      var n = +s.dataset.n;
-      card.dataset.n = n; pesan.textContent = '';
-      card.querySelectorAll('.stars button').forEach(function (x) { x.classList.toggle('on', +x.dataset.n <= n); });
-      return;
-    }
-    var k = e.target.closest('[data-kirim]');
-    if (!k) return;
-    var bintang = +card.dataset.n;
-    if (!bintang) { pesan.textContent = 'Pilih bintang dulu.'; return; }
-    k.disabled = true; pesan.textContent = '';
-    google.script.run
-      .withSuccessHandler(function (r) {
-        if (r.status === 'success') { toast(r.message); bpMuat(); }
-        else { k.disabled = false; pesan.textContent = r.message; }
-      })
-      .withFailureHandler(function () { k.disabled = false; pesan.textContent = 'Koneksi terputus.'; })
-      .kirimRating(SID, card.dataset.id, bintang, '');
+    if (s) { bpBukaNilai(card.dataset.id, +s.dataset.n); return; }
+    if (e.target.closest('[data-kirim]')) bpBukaNilai(card.dataset.id, 0);
   });
 
-  bpMuat();
+  // Pop up penilaian (dijaga supaya Beranda tetap termuat walau elemennya belum ada)
+  var mdl = bpEl('bmModal');
+  if (mdl) {
+    mdl.addEventListener('click', function (e) { if (e.target === mdl) bpTutupNilai(); });   // klik area gelap
+    mdl.addEventListener('keydown', function (e) { if (e.key === 'Escape') bpTutupNilai(); });
+    bpEl('bmTutup').addEventListener('click', bpTutupNilai);
+    bpEl('bmBatal').addEventListener('click', bpTutupNilai);
+    bpEl('bmKirim').addEventListener('click', bpKirimNilai);
+    bpEl('bmStars').addEventListener('click', function (e) {
+      var s = e.target.closest('.bm-star');
+      if (s) { bpSetBintang(+s.dataset.n); bpEl('bmErr').textContent = ''; }
+    });
+  }
+
+  bpMuat(true);
 }
 </script>

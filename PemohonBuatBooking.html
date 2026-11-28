@@ -54,6 +54,37 @@
   .bb-grid{grid-template-columns:1fr}
   .bb-act button{flex:1}
 }
+
+/* ===== Responsif HP (tambahan; aturan di atas tidak diubah) ===== */
+@media(max-width:768px){
+  .bb-title{font-size:19px}
+  .bb-sub{font-size:12.5px;margin-bottom:14px}
+  .bb-ch{padding:14px 16px}
+  .bb-rules{padding:0 16px;gap:10px}
+  .bb-stat{margin:10px 16px 16px;flex-wrap:wrap;gap:8px 10px}
+  .bb-form{padding:16px}
+  .bb-grid{gap:16px}
+  .bb-in input,.bb-in select{min-width:0}
+}
+
+@media(max-width:640px){
+  .bb-crumb{font-size:10px}
+  .bb-lb{flex-wrap:wrap;row-gap:2px}              /* hint "Paling cepat lusa" turun ke baris bawah bila sempit */
+  .bb-in input,.bb-in select{height:46px;font-size:16px}   /* 16px supaya iPhone tidak zoom otomatis saat mengisi */
+  .bb-in .bb-ic{font-size:14px}
+  .bb-tag{right:46px}
+  .bb-info{align-items:flex-start;margin-top:16px;line-height:1.5}
+  .bb-info i{margin-top:3px}
+  .bb-act{margin-top:18px;padding-top:16px}
+  .bb-act button{min-height:44px}
+}
+
+@media(max-width:380px){
+  .bb-ch{gap:10px}
+  .bb-rule{padding:10px 12px;font-size:12px}
+  .bb-act{flex-direction:column-reverse}          /* tombol Ajukan di atas, Batal di bawah */
+}
+
 </style>
 
 <div class="bb-wrap" id="bbForm">
